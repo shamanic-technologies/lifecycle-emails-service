@@ -1,0 +1,236 @@
+import request from "supertest";
+import { vi, beforeAll, beforeEach, afterAll, describe, it, expect } from "vitest";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { eq } from "drizzle-orm";
+
+// Mock external services before app imports
+vi.mock("../../src/lib/clerk.js", () => ({
+  resolveUserEmail: vi.fn().mockResolvedValue("user@test.com"),
+  resolveOrgEmails: vi.fn().mockResolvedValue(["org1@test.com", "org2@test.com"]),
+}));
+
+vi.mock("../../src/lib/postmark.js", () => ({
+  sendViaPostmark: vi.fn().mockResolvedValue(undefined),
+}));
+
+import app from "../../src/index.js";
+import { db, sql } from "../../src/db/index.js";
+import { emailEvents } from "../../src/db/schema.js";
+import { sendViaPostmark } from "../../src/lib/postmark.js";
+import { resolveUserEmail } from "../../src/lib/clerk.js";
+
+const API_KEY = process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY!;
+
+beforeAll(async () => {
+  await migrate(db, { migrationsFolder: "./drizzle" });
+}, 15000);
+
+beforeEach(async () => {
+  await sql`TRUNCATE TABLE email_events CASCADE`;
+  vi.mocked(sendViaPostmark).mockClear();
+  vi.mocked(resolveUserEmail).mockClear();
+});
+
+afterAll(async () => {
+  await sql`TRUNCATE TABLE email_events CASCADE`;
+  await sql.end();
+});
+
+// --- Auth ---
+
+describe("authentication", () => {
+  it("rejects request without API key", async () => {
+    const res = await request(app)
+      .post("/send")
+      .send({ appId: "mcpfactory", eventType: "waitlist", recipientEmail: "a@b.com" });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects request with wrong API key", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", "wrong-key")
+      .send({ appId: "mcpfactory", eventType: "waitlist", recipientEmail: "a@b.com" });
+    expect(res.status).toBe(401);
+  });
+});
+
+// --- Validation ---
+
+describe("validation", () => {
+  it("rejects missing appId", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ eventType: "waitlist", recipientEmail: "a@b.com" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/appId/);
+  });
+
+  it("rejects missing eventType", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", recipientEmail: "a@b.com" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/eventType/);
+  });
+
+  it("rejects request with no recipient info", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "waitlist" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/clerkUserId|clerkOrgId|recipientEmail/);
+  });
+});
+
+// --- Once-only dedup ---
+
+describe("once-only dedup", () => {
+  it("sends waitlist email on first request", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "waitlist", recipientEmail: "new@example.com" });
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].sent).toBe(true);
+    expect(vi.mocked(sendViaPostmark)).toHaveBeenCalledOnce();
+  });
+
+  it("blocks duplicate waitlist for same email", async () => {
+    const payload = { appId: "mcpfactory", eventType: "waitlist", recipientEmail: "dup@example.com" };
+
+    await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const res = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].sent).toBe(false);
+    expect(res.body.results[0].reason).toBe("duplicate");
+  });
+
+  it("sends welcome email via clerkUserId and blocks duplicate", async () => {
+    const payload = { appId: "mcpfactory", eventType: "welcome", clerkUserId: "user_123" };
+
+    const first = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    expect(first.body.results[0].sent).toBe(true);
+
+    const second = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    expect(second.body.results[0].sent).toBe(false);
+    expect(second.body.results[0].reason).toBe("duplicate");
+  });
+});
+
+// --- Daily dedup ---
+
+describe("daily dedup", () => {
+  it("sends user_active on first request", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "user_active", clerkUserId: "user_456" });
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].sent).toBe(true);
+  });
+
+  it("blocks duplicate user_active for same user on same day", async () => {
+    const payload = { appId: "mcpfactory", eventType: "user_active", clerkUserId: "user_789" };
+
+    await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const res = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(res.body.results[0].sent).toBe(false);
+    expect(res.body.results[0].reason).toBe("duplicate");
+  });
+});
+
+// --- Repeatable events ---
+
+describe("repeatable events", () => {
+  it("allows multiple sends for campaign_created", async () => {
+    const payload = { appId: "mcpfactory", eventType: "campaign_created", recipientEmail: "user@test.com" };
+
+    const first = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const second = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(first.body.results[0].sent).toBe(true);
+    expect(second.body.results[0].sent).toBe(true);
+    expect(vi.mocked(sendViaPostmark)).toHaveBeenCalledTimes(2);
+  });
+});
+
+// --- Recipient resolution ---
+
+describe("recipient resolution", () => {
+  it("uses recipientEmail directly", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "campaign_created", recipientEmail: "direct@test.com" });
+    expect(res.body.results[0].email).toBe("direct@test.com");
+    expect(res.body.results[0].sent).toBe(true);
+  });
+
+  it("resolves email via Clerk when clerkUserId provided", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "campaign_created", clerkUserId: "user_abc" });
+    expect(vi.mocked(resolveUserEmail)).toHaveBeenCalledWith("user_abc");
+    expect(res.body.results[0].email).toBe("user@test.com");
+    expect(res.body.results[0].sent).toBe(true);
+  });
+
+  it("sends admin notifications to admin email", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "signup_notification", clerkUserId: "user_new" });
+    expect(res.body.results[0].email).toBe("kevin@mcpfactory.org");
+    expect(res.body.results[0].sent).toBe(true);
+  });
+});
+
+// --- DB state ---
+
+describe("database records", () => {
+  it("inserts email_event row with correct fields", async () => {
+    await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "campaign_created", recipientEmail: "db@test.com", metadata: { foo: "bar" } });
+
+    const rows = await db
+      .select()
+      .from(emailEvents)
+      .where(eq(emailEvents.recipientEmail, "db@test.com"));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].appId).toBe("mcpfactory");
+    expect(rows[0].eventType).toBe("campaign_created");
+    expect(rows[0].status).toBe("sent");
+    expect(rows[0].metadata).toEqual({ foo: "bar" });
+  });
+
+  it("records failed status when postmark throws", async () => {
+    vi.mocked(sendViaPostmark).mockRejectedValueOnce(new Error("postmark down"));
+
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ appId: "mcpfactory", eventType: "waitlist", recipientEmail: "fail@test.com" });
+
+    expect(res.body.results[0].sent).toBe(false);
+    expect(res.body.results[0].reason).toBe("postmark down");
+
+    const rows = await db
+      .select()
+      .from(emailEvents)
+      .where(eq(emailEvents.recipientEmail, "fail@test.com"));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("failed");
+    expect(rows[0].errorMessage).toBe("postmark down");
+  });
+});
