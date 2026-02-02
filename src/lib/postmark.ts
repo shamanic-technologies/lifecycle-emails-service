@@ -9,6 +9,8 @@ interface SendEmailParams {
   htmlBody: string;
   textBody: string;
   tag: string;
+  orgId?: string | null;
+  runId: string;
 }
 
 export async function sendViaPostmark(params: SendEmailParams): Promise<void> {
@@ -30,6 +32,8 @@ export async function sendViaPostmark(params: SendEmailParams): Promise<void> {
       htmlBody: params.htmlBody,
       textBody: params.textBody,
       tag: params.tag,
+      orgId: params.orgId ?? null,
+      runId: params.runId,
       trackOpens: false,
       trackLinks: "None",
     }),
