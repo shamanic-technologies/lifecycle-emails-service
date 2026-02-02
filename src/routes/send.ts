@@ -11,9 +11,12 @@ const router = Router();
 // Event types that are deduped (sent only once per key)
 const ONCE_ONLY_EVENTS = new Set(["waitlist", "welcome", "signup_notification"]);
 
+// Event types deduped per day (one per user per day)
+const DAILY_DEDUP_EVENTS = new Set(["user_active"]);
+
 // Events where recipient is hardcoded to admin
 const ADMIN_EMAIL = "kevin@mcpfactory.org";
-const ADMIN_NOTIFICATION_EVENTS = new Set(["signup_notification", "signin_notification"]);
+const ADMIN_NOTIFICATION_EVENTS = new Set(["signup_notification", "signin_notification", "user_active"]);
 
 interface SendRequest {
   appId: string;
@@ -24,18 +27,28 @@ interface SendRequest {
   metadata?: Record<string, unknown>;
 }
 
+function getTodayDate(): string {
+  return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+}
+
 function buildDedupKey(appId: string, eventType: string, req: SendRequest): string | null {
-  if (!ONCE_ONLY_EVENTS.has(eventType)) {
-    return null; // repeatable event, no dedup
+  // Daily dedup: one per user per day
+  if (DAILY_DEDUP_EVENTS.has(eventType)) {
+    const identifier = req.clerkUserId || req.recipientEmail || "unknown";
+    return `${appId}:${eventType}:${identifier}:${getTodayDate()}`;
   }
 
-  if (eventType === "waitlist" && req.recipientEmail) {
-    return `${appId}:waitlist:${req.recipientEmail}`;
+  // Once-only dedup
+  if (ONCE_ONLY_EVENTS.has(eventType)) {
+    if (eventType === "waitlist" && req.recipientEmail) {
+      return `${appId}:waitlist:${req.recipientEmail}`;
+    }
+    if (req.clerkUserId) {
+      return `${appId}:${eventType}:${req.clerkUserId}`;
+    }
   }
-  if (req.clerkUserId) {
-    return `${appId}:${eventType}:${req.clerkUserId}`;
-  }
-  return null;
+
+  return null; // repeatable event, no dedup
 }
 
 router.post("/send", requireApiKey, async (req, res) => {

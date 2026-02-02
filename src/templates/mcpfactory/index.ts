@@ -5,6 +5,7 @@ import { signupNotification } from "./signup-notification.js";
 import { signinNotification } from "./signin-notification.js";
 import { campaignCreated } from "./campaign-created.js";
 import { campaignStopped } from "./campaign-stopped.js";
+import { userActive } from "./user-active.js";
 
 export const templates: Record<string, (metadata?: Record<string, unknown>) => TemplateResult> = {
   waitlist,
@@ -13,4 +14,5 @@ export const templates: Record<string, (metadata?: Record<string, unknown>) => T
   signin_notification: signinNotification,
   campaign_created: campaignCreated,
   campaign_stopped: campaignStopped,
+  user_active: userActive,
 };
