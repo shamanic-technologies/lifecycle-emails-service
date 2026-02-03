@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      LIFECYCLE_EMAILS_SERVICE_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      LIFECYCLE_EMAILS_SERVICE_API_KEY: ${{ secrets.TEST_API_KEY }}
+      CLERK_SECRET_KEY: fake-clerk-key
+      POSTMARK_SERVICE_API_KEY: fake-postmark-key
+      POSTMARK_SERVICE_URL: http://localhost:9999
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Create Neon branch only for PRs
+      - name: Create Neon branch for PR
+        if: github.event_name == 'pull_request'
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: pr-${{ github.event.number }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      # Override DB URL with Neon branch for PRs
+      - name: Use Neon branch DB for PR
+        if: github.event_name == 'pull_request'
+        run: echo "LIFECYCLE_EMAILS_SERVICE_DATABASE_URL=${{ steps.neon.outputs.db_url_pooled }}" >> "$GITHUB_ENV"
+
+      - name: Push schema
+        run: npx drizzle-kit push --force
+
+      - name: Run tests
+        run: npm test
