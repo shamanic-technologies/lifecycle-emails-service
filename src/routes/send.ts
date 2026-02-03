@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { requireApiKey } from "../middleware/auth.js";
 import { db } from "../db/index.js";
@@ -143,6 +144,8 @@ router.post("/send", requireApiKey, async (req, res) => {
           htmlBody: template.htmlBody,
           textBody: template.textBody,
           tag: `${body.appId}-${body.eventType}`,
+          orgId: body.clerkOrgId ?? null,
+          runId: randomUUID(),
         });
 
         results.push({ email, sent: true });

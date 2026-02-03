@@ -1,0 +1,61 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.hoisted(() => {
+  process.env.POSTMARK_SERVICE_API_KEY = "test-api-key";
+});
+
+import { sendViaPostmark } from "../../src/lib/postmark.js";
+
+let fetchSpy: ReturnType<typeof vi.fn>;
+
+beforeEach(() => {
+  fetchSpy = vi.fn().mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", fetchSpy);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("sendViaPostmark", () => {
+  it("includes orgId and runId in the Postmark payload", async () => {
+    await sendViaPostmark({
+      to: "test@example.com",
+      subject: "Test subject",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "mcpfactory-user_active",
+      orgId: "org_123",
+      runId: "run_abc",
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body).toMatchObject({
+      from: expect.any(String),
+      to: "test@example.com",
+      subject: "Test subject",
+      orgId: "org_123",
+      runId: "run_abc",
+    });
+  });
+
+  it("sends orgId as null when not provided", async () => {
+    await sendViaPostmark({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body).toHaveProperty("orgId");
+    expect(body).toHaveProperty("runId", "run_abc");
+  });
+});

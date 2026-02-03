@@ -1,0 +1,46 @@
+name: README freshness check
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  check-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if README was updated
+        run: |
+          # Get list of changed files in the PR
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # Check if any source files changed
+          SRC_CHANGED=false
+          for file in $CHANGED_FILES; do
+            case "$file" in
+              src/*|package.json|Dockerfile|drizzle.config.ts|.env.example|railway.json|tsconfig.json)
+                SRC_CHANGED=true
+                break
+                ;;
+            esac
+          done
+
+          # If source files changed but README didn't, warn
+          if [ "$SRC_CHANGED" = true ]; then
+            README_CHANGED=$(echo "$CHANGED_FILES" | grep -c "^README.md$" || true)
+            if [ "$README_CHANGED" -eq 0 ]; then
+              echo "::warning::Source files were changed but README.md was not updated. Please verify the README still accurately reflects the project."
+              echo ""
+              echo "Changed source files:"
+              echo "$CHANGED_FILES" | grep -E "^(src/|package\.json|Dockerfile|drizzle\.config\.ts|\.env\.example|railway\.json|tsconfig\.json)" || true
+              echo ""
+              echo "Sections to review: API, Event Types, Tech Stack, Setup, Environment Variables, Scripts, Project Structure"
+            else
+              echo "README.md was updated alongside source changes."
+            fi
+          else
+            echo "No source files changed, README check skipped."
+          fi
