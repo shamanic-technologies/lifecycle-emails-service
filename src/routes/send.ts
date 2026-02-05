@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { requireApiKey } from "../middleware/auth.js";
 import { db } from "../db/index.js";
@@ -6,6 +5,11 @@ import { emailEvents } from "../db/schema.js";
 import { getTemplate } from "../templates/index.js";
 import { sendViaPostmark } from "../lib/postmark.js";
 import { resolveUserEmail, resolveOrgEmails } from "../lib/clerk.js";
+import {
+  ensureOrganization,
+  createRun,
+  updateRun,
+} from "../lib/runs-client.js";
 
 const router = Router();
 
@@ -18,6 +22,9 @@ const DAILY_DEDUP_EVENTS = new Set(["user_active"]);
 // Events where recipient is hardcoded to admin
 const ADMIN_EMAIL = "kevin@mcpfactory.org";
 const ADMIN_NOTIFICATION_EVENTS = new Set(["signup_notification", "signin_notification", "user_active"]);
+
+// System org ID for runs without a user org (admin notifications, etc.)
+const SYSTEM_ORG_ID = "lifecycle-emails-service";
 
 interface SendRequest {
   appId: string;
@@ -101,6 +108,24 @@ router.post("/send", requireApiKey, async (req, res) => {
         ? `${dedupKey}:${email}`
         : dedupKey;
 
+      // Create a run in runs-service before sending
+      const externalOrgId = body.clerkOrgId || SYSTEM_ORG_ID;
+      let runsOrgId: string;
+      let run: { id: string } | null = null;
+
+      try {
+        runsOrgId = await ensureOrganization(externalOrgId);
+        run = await createRun({
+          organizationId: runsOrgId,
+          serviceName: "lifecycle-emails-service",
+          taskName: `email-${body.eventType}`,
+        });
+      } catch (runErr: any) {
+        console.error(`Failed to create run for ${body.eventType}:`, runErr.message);
+        results.push({ email, sent: false, reason: `Run creation failed: ${runErr.message}` });
+        continue;
+      }
+
       try {
         // Insert with dedup
         if (recipientDedupKey) {
@@ -120,6 +145,7 @@ router.post("/send", requireApiKey, async (req, res) => {
             .returning();
 
           if (inserted.length === 0) {
+            await updateRun(run.id, "completed");
             results.push({ email, sent: false, reason: "duplicate" });
             continue;
           }
@@ -137,7 +163,7 @@ router.post("/send", requireApiKey, async (req, res) => {
           });
         }
 
-        // Send via Postmark
+        // Send via Postmark with the real run ID
         await sendViaPostmark({
           to: email,
           subject: template.subject,
@@ -145,12 +171,20 @@ router.post("/send", requireApiKey, async (req, res) => {
           textBody: template.textBody,
           tag: `${body.appId}-${body.eventType}`,
           orgId: body.clerkOrgId ?? null,
-          runId: randomUUID(),
+          runId: run.id,
         });
 
+        await updateRun(run.id, "completed");
         results.push({ email, sent: true });
       } catch (err: any) {
         console.error(`Failed to send ${body.eventType} to ${email}:`, err.message);
+
+        // Mark run as failed
+        try {
+          await updateRun(run.id, "failed", err.message);
+        } catch {
+          // Best effort
+        }
 
         // Update status to failed if we inserted a row
         try {

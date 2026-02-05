@@ -72,6 +72,8 @@ npm run dev             # start dev server on PORT
 | `LIFECYCLE_EMAILS_SERVICE_API_KEY` | API key for authenticating requests |
 | `POSTMARK_SERVICE_URL` | Postmark service endpoint |
 | `POSTMARK_SERVICE_API_KEY` | Postmark API key |
+| `RUNS_SERVICE_URL` | Runs service endpoint (default: http://localhost:3006) |
+| `RUNS_SERVICE_API_KEY` | Runs service API key |
 | `CLERK_SECRET_KEY` | Clerk secret key for user resolution |
 | `PORT` | Server port (default: 3008) |
 
@@ -99,6 +101,7 @@ src/
   lib/
     clerk.ts            # Clerk user/org email resolution
     postmark.ts         # Postmark email sending
+    runs-client.ts      # Runs service client for tracking email operations
   middleware/
     auth.ts             # API key authentication
   routes/

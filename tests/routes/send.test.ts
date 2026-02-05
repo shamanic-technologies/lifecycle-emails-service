@@ -24,6 +24,13 @@ vi.mock("../../src/lib/clerk.js", () => ({
   resolveOrgEmails: vi.fn().mockResolvedValue(["user@example.com"]),
 }));
 
+// Mock runs-client to avoid external calls
+vi.mock("../../src/lib/runs-client.js", () => ({
+  ensureOrganization: vi.fn().mockResolvedValue("runs-org-123"),
+  createRun: vi.fn().mockResolvedValue({ id: "run-456" }),
+  updateRun: vi.fn().mockResolvedValue({}),
+}));
+
 import request from "supertest";
 import express from "express";
 import sendRoutes from "../../src/routes/send.js";
@@ -44,7 +51,7 @@ afterEach(() => {
 });
 
 describe("POST /send", () => {
-  it("passes orgId and runId to the Postmark service for user_active events", async () => {
+  it("creates a run and passes real runId to Postmark service", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
@@ -62,15 +69,15 @@ describe("POST /send", () => {
     const body = JSON.parse(options.body);
 
     expect(body.orgId).toBe("org_456");
-    expect(body.runId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-    );
+    expect(body.runId).toBe("run-456"); // Real run ID from runs-service
     expect(body.from).toBeDefined();
     expect(body.to).toBeDefined();
     expect(body.subject).toBeDefined();
   });
 
-  it("sends orgId as null when clerkOrgId is not provided", async () => {
+  it("uses system org when clerkOrgId is not provided", async () => {
+    const { ensureOrganization } = await import("../../src/lib/runs-client.js");
+
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
@@ -82,12 +89,13 @@ describe("POST /send", () => {
 
     expect(res.status).toBe(200);
 
+    // Should use system org ID when no clerkOrgId provided
+    expect(ensureOrganization).toHaveBeenCalledWith("lifecycle-emails-service");
+
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
     expect(body.orgId).toBeNull();
-    expect(body.runId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-    );
+    expect(body.runId).toBe("run-456");
   });
 });

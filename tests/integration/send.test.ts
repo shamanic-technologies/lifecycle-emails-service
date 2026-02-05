@@ -13,6 +13,12 @@ vi.mock("../../src/lib/postmark.js", () => ({
   sendViaPostmark: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../src/lib/runs-client.js", () => ({
+  ensureOrganization: vi.fn().mockResolvedValue("runs-org-123"),
+  createRun: vi.fn().mockResolvedValue({ id: "run-456" }),
+  updateRun: vi.fn().mockResolvedValue({}),
+}));
+
 import app from "../../src/index.js";
 import { db, sql } from "../../src/db/index.js";
 import { emailEvents } from "../../src/db/schema.js";
