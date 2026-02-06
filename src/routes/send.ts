@@ -60,6 +60,27 @@ function buildDedupKey(appId: string, eventType: string, req: SendRequest): stri
 }
 
 router.post("/send", requireApiKey, async (req, res) => {
+  // #swagger.tags = ['Email']
+  // #swagger.summary = 'Send a lifecycle email'
+  // #swagger.description = 'Send a templated lifecycle email with deduplication support. Resolves recipients via Clerk user/org IDs or direct email.'
+  // #swagger.security = [{ "apiKey": [] }]
+  /* #swagger.parameters['body'] = {
+    in: 'body',
+    required: true,
+    schema: { $ref: '#/definitions/SendRequest' }
+  } */
+  /* #swagger.responses[200] = {
+    description: 'Email send results',
+    schema: { $ref: '#/definitions/SendResponse' }
+  } */
+  /* #swagger.responses[400] = {
+    description: 'Validation error',
+    schema: { $ref: '#/definitions/ErrorResponse' }
+  } */
+  /* #swagger.responses[401] = {
+    description: 'Unauthorized - invalid or missing API key',
+    schema: { $ref: '#/definitions/ErrorResponse' }
+  } */
   try {
     const body = req.body as SendRequest;
 

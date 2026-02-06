@@ -34,6 +34,10 @@ One of `clerkUserId`, `clerkOrgId`, or `recipientEmail` is required.
 
 Returns `{ "status": "ok" }`.
 
+### `GET /openapi.json`
+
+Returns the OpenAPI spec for this service. Used by the [API Registry Service](https://github.com/shamanic-technologies/api-registry-service) to discover and index endpoints.
+
 ## Event Types (mcpfactory)
 
 | Event               | Dedup Strategy | Recipient |
@@ -82,7 +86,8 @@ npm run dev             # start dev server on PORT
 | Script | Description |
 | ------ | ----------- |
 | `npm run dev` | Start dev server with hot reload |
-| `npm run build` | Compile TypeScript to `dist/` |
+| `npm run build` | Compile TypeScript to `dist/` and generate OpenAPI spec |
+| `npm run generate:openapi` | Generate `openapi.json` from route annotations |
 | `npm start` | Run compiled server |
 | `npm test` | Run tests (Vitest) |
 | `npm run db:generate` | Generate Drizzle migrations |
@@ -106,6 +111,7 @@ src/
     auth.ts             # API key authentication
   routes/
     health.ts           # Health check endpoint
+    openapi.ts          # GET /openapi.json endpoint
     send.ts             # POST /send endpoint with dedup logic
   templates/
     index.ts            # Template registry
@@ -118,4 +124,6 @@ src/
       campaign-created.ts
       campaign-stopped.ts
       user-active.ts
+scripts/
+  generate-openapi.ts   # OpenAPI spec generation via swagger-autogen
 ```
