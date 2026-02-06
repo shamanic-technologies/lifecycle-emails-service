@@ -3,6 +3,7 @@ import cors from "cors";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import healthRoutes from "./routes/health.js";
 import sendRoutes from "./routes/send.js";
+import openapiRoutes from "./routes/openapi.js";
 import { db } from "./db/index.js";
 
 const app = express();
@@ -13,6 +14,7 @@ app.use(express.json());
 
 app.use(healthRoutes);
 app.use(sendRoutes);
+app.use(openapiRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
