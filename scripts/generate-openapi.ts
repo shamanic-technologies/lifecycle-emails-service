@@ -8,11 +8,12 @@ const rootDir = join(__dirname, "..");
 const doc = {
   info: {
     title: "Lifecycle Emails Service",
-    description: "Send lifecycle and transactional emails with deduplication, template rendering, and delivery tracking.",
-    version: "0.1.0",
+    description: "Transactional and lifecycle email service",
+    version: "1.0.0",
   },
-  host: "localhost:3008",
-  schemes: ["https"],
+  servers: [
+    { url: process.env.SERVICE_URL || "http://localhost:3000" },
+  ],
   securityDefinitions: {
     apiKey: {
       type: "apiKey",
@@ -54,6 +55,6 @@ const routes = [
   join(rootDir, "src/routes/send.ts"),
 ];
 
-swaggerAutogen()(outputFile, routes, doc).then(() => {
+swaggerAutogen({ openapi: "3.0.0" })(outputFile, routes, doc).then(() => {
   console.log("OpenAPI spec generated at openapi.json");
 });
