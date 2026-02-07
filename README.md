@@ -26,7 +26,7 @@ Requires `x-api-key` header.
 | `clerkUserId`    | No       | Clerk user ID to resolve email           |
 | `clerkOrgId`     | No       | Clerk org ID to send to all members      |
 | `recipientEmail` | No       | Direct email (fallback if no Clerk IDs)  |
-| `metadata`       | No       | Template-specific data                   |
+| `metadata`       | No       | Template-specific data (can include `brandId`, `campaignId` for Postmark tracking) |
 
 One of `clerkUserId`, `clerkOrgId`, or `recipientEmail` is required.
 

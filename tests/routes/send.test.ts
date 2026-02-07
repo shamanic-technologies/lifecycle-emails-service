@@ -73,6 +73,9 @@ describe("POST /send", () => {
     expect(body.from).toBeDefined();
     expect(body.to).toBeDefined();
     expect(body.subject).toBeDefined();
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.brandId).toBeDefined();
+    expect(body.campaignId).toBeDefined();
   });
 
   it("uses system org when clerkOrgId is not provided", async () => {
@@ -97,5 +100,51 @@ describe("POST /send", () => {
 
     expect(body.orgId).toBeNull();
     expect(body.runId).toBe("run-456");
+  });
+
+  it("passes brandId and campaignId from metadata to Postmark", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "mcpfactory",
+        eventType: "campaign_created",
+        recipientEmail: "user@example.com",
+        metadata: {
+          campaignName: "Test Campaign",
+          brandId: "brand_abc",
+          campaignId: "campaign_def",
+        },
+      });
+
+    expect(res.status).toBe(200);
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.brandId).toBe("brand_abc");
+    expect(body.campaignId).toBe("campaign_def");
+  });
+
+  it("uses default brandId and campaignId when not in metadata", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "mcpfactory",
+        eventType: "campaign_stopped",
+        recipientEmail: "user@example.com",
+        metadata: { campaignName: "Test" },
+      });
+
+    expect(res.status).toBe(200);
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.brandId).toBe("lifecycle");
+    expect(body.campaignId).toBe("lifecycle-campaign_stopped");
   });
 });

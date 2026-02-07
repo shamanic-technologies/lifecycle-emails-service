@@ -27,6 +27,9 @@ describe("sendViaPostmark", () => {
       tag: "mcpfactory-user_active",
       orgId: "org_123",
       runId: "run_abc",
+      appId: "mcpfactory",
+      brandId: "brand_123",
+      campaignId: "campaign_456",
     });
 
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -39,6 +42,9 @@ describe("sendViaPostmark", () => {
       subject: "Test subject",
       orgId: "org_123",
       runId: "run_abc",
+      appId: "mcpfactory",
+      brandId: "brand_123",
+      campaignId: "campaign_456",
     });
   });
 
@@ -50,6 +56,9 @@ describe("sendViaPostmark", () => {
       textBody: "Test",
       tag: "test-tag",
       runId: "run_abc",
+      appId: "mcpfactory",
+      brandId: "lifecycle",
+      campaignId: "lifecycle-test",
     });
 
     const [, options] = fetchSpy.mock.calls[0];
@@ -57,5 +66,26 @@ describe("sendViaPostmark", () => {
 
     expect(body).toHaveProperty("orgId");
     expect(body).toHaveProperty("runId", "run_abc");
+  });
+
+  it("includes appId, brandId, and campaignId in the Postmark payload", async () => {
+    await sendViaPostmark({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+      appId: "mcpfactory",
+      brandId: "brand_xyz",
+      campaignId: "campaign_789",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.brandId).toBe("brand_xyz");
+    expect(body.campaignId).toBe("campaign_789");
   });
 });

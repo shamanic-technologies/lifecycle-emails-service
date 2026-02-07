@@ -193,6 +193,9 @@ router.post("/send", requireApiKey, async (req, res) => {
           tag: `${body.appId}-${body.eventType}`,
           orgId: body.clerkOrgId ?? null,
           runId: run.id,
+          appId: body.appId,
+          brandId: (body.metadata?.brandId as string) || "lifecycle",
+          campaignId: (body.metadata?.campaignId as string) || `lifecycle-${body.eventType}`,
         });
 
         await updateRun(run.id, "completed");
