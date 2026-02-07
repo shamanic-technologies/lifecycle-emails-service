@@ -51,13 +51,15 @@ afterEach(() => {
 });
 
 describe("POST /send", () => {
-  it("creates a run and passes real runId to Postmark service", async () => {
+  it("creates a run and passes all required fields to Postmark service", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
       .send({
         appId: "mcpfactory",
         eventType: "user_active",
+        brandId: "brand_abc",
+        campaignId: "campaign_def",
         clerkUserId: "user_123",
         clerkOrgId: "org_456",
       });
@@ -69,10 +71,13 @@ describe("POST /send", () => {
     const body = JSON.parse(options.body);
 
     expect(body.orgId).toBe("org_456");
-    expect(body.runId).toBe("run-456"); // Real run ID from runs-service
+    expect(body.runId).toBe("run-456");
     expect(body.from).toBeDefined();
     expect(body.to).toBeDefined();
     expect(body.subject).toBeDefined();
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.brandId).toBe("brand_abc");
+    expect(body.campaignId).toBe("campaign_def");
   });
 
   it("uses system org when clerkOrgId is not provided", async () => {
@@ -84,12 +89,13 @@ describe("POST /send", () => {
       .send({
         appId: "mcpfactory",
         eventType: "user_active",
+        brandId: "brand_abc",
+        campaignId: "campaign_def",
         clerkUserId: "user_789",
       });
 
     expect(res.status).toBe(200);
 
-    // Should use system org ID when no clerkOrgId provided
     expect(ensureOrganization).toHaveBeenCalledWith("lifecycle-emails-service");
 
     const [, options] = fetchSpy.mock.calls[0];
@@ -97,5 +103,55 @@ describe("POST /send", () => {
 
     expect(body.orgId).toBeNull();
     expect(body.runId).toBe("run-456");
+  });
+
+  it("returns 400 when brandId or campaignId is missing", async () => {
+    const res1 = await request(app)
+      .post("/send")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "mcpfactory",
+        eventType: "campaign_created",
+        recipientEmail: "user@example.com",
+      });
+
+    expect(res1.status).toBe(400);
+    expect(res1.body.error).toContain("brandId");
+    expect(res1.body.error).toContain("campaignId");
+
+    const res2 = await request(app)
+      .post("/send")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "mcpfactory",
+        eventType: "campaign_created",
+        brandId: "brand_abc",
+        recipientEmail: "user@example.com",
+      });
+
+    expect(res2.status).toBe(400);
+  });
+
+  it("passes brandId and campaignId to Postmark for campaign events", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "mcpfactory",
+        eventType: "campaign_created",
+        brandId: "brand_abc",
+        campaignId: "campaign_def",
+        recipientEmail: "user@example.com",
+        metadata: { campaignName: "Test Campaign" },
+      });
+
+    expect(res.status).toBe(200);
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.brandId).toBe("brand_abc");
+    expect(body.campaignId).toBe("campaign_def");
   });
 });

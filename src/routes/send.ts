@@ -29,6 +29,8 @@ const SYSTEM_ORG_ID = "lifecycle-emails-service";
 interface SendRequest {
   appId: string;
   eventType: string;
+  brandId: string;
+  campaignId: string;
   clerkUserId?: string;
   clerkOrgId?: string;
   recipientEmail?: string;
@@ -84,8 +86,8 @@ router.post("/send", requireApiKey, async (req, res) => {
   try {
     const body = req.body as SendRequest;
 
-    if (!body.appId || !body.eventType) {
-      res.status(400).json({ error: "appId and eventType are required" });
+    if (!body.appId || !body.eventType || !body.brandId || !body.campaignId) {
+      res.status(400).json({ error: "appId, eventType, brandId, and campaignId are required" });
       return;
     }
 
@@ -193,6 +195,9 @@ router.post("/send", requireApiKey, async (req, res) => {
           tag: `${body.appId}-${body.eventType}`,
           orgId: body.clerkOrgId ?? null,
           runId: run.id,
+          appId: body.appId,
+          brandId: body.brandId,
+          campaignId: body.campaignId,
         });
 
         await updateRun(run.id, "completed");

@@ -25,6 +25,8 @@ const doc = {
     SendRequest: {
       appId: "mcpfactory",
       eventType: "welcome",
+      brandId: "brand_abc123",
+      campaignId: "campaign_xyz789",
       clerkUserId: "user_abc123",
       clerkOrgId: "org_xyz789",
       recipientEmail: "user@example.com",

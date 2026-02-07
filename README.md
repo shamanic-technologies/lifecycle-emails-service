@@ -14,6 +14,8 @@ Requires `x-api-key` header.
 {
   "appId": "mcpfactory",
   "eventType": "welcome",
+  "brandId": "brand_xxx",
+  "campaignId": "campaign_xxx",
   "clerkUserId": "user_xxx",
   "metadata": { "name": "Alice" }
 }
@@ -23,6 +25,8 @@ Requires `x-api-key` header.
 | ---------------- | -------- | ---------------------------------------- |
 | `appId`          | Yes      | App identifier (e.g. `mcpfactory`)       |
 | `eventType`      | Yes      | Event type (see below)                   |
+| `brandId`        | Yes      | Brand ID (passed to Postmark for tracking) |
+| `campaignId`     | Yes      | Campaign ID (passed to Postmark for tracking) |
 | `clerkUserId`    | No       | Clerk user ID to resolve email           |
 | `clerkOrgId`     | No       | Clerk org ID to send to all members      |
 | `recipientEmail` | No       | Direct email (fallback if no Clerk IDs)  |
