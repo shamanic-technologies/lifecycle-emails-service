@@ -79,6 +79,7 @@ npm run dev             # start dev server on PORT
 | `RUNS_SERVICE_URL` | Runs service endpoint (default: http://localhost:3006) |
 | `RUNS_SERVICE_API_KEY` | Runs service API key |
 | `CLERK_SECRET_KEY` | Clerk secret key for user resolution |
+| `SERVICE_URL` | Public URL used in OpenAPI spec (default: http://localhost:3000) |
 | `PORT` | Server port (default: 3008) |
 
 ## Scripts

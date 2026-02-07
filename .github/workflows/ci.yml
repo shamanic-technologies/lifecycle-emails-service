@@ -41,6 +41,9 @@ jobs:
         if: github.event_name == 'pull_request'
         run: echo "LIFECYCLE_EMAILS_SERVICE_DATABASE_URL=${{ steps.neon.outputs.db_url_pooled }}" >> "$GITHUB_ENV"
 
+      - name: Generate OpenAPI spec
+        run: npm run generate:openapi
+
       - name: Push schema
         run: npx drizzle-kit push --force
 
