@@ -21,32 +21,54 @@ const doc = {
       name: "x-api-key",
     },
   },
-  definitions: {
+  "@definitions": {
     SendRequest: {
-      appId: "mcpfactory",
-      eventType: "welcome",
-      brandId: "brand_abc123",
-      campaignId: "campaign_xyz789",
-      clerkUserId: "user_abc123",
-      clerkOrgId: "org_xyz789",
-      recipientEmail: "user@example.com",
-      metadata: { name: "Alice" },
+      type: "object",
+      required: ["appId", "eventType"],
+      properties: {
+        appId: { type: "string", example: "mcpfactory" },
+        eventType: { type: "string", example: "welcome" },
+        brandId: { type: "string", example: "brand_abc123" },
+        campaignId: { type: "string", example: "campaign_xyz789" },
+        clerkUserId: { type: "string", example: "user_abc123" },
+        clerkOrgId: { type: "string", example: "org_xyz789" },
+        recipientEmail: { type: "string", example: "user@example.com" },
+        metadata: { type: "object", example: { name: "Alice" } },
+      },
     },
     SendResponse: {
-      results: [
-        {
-          email: "user@example.com",
-          sent: true,
-          reason: "duplicate",
+      type: "object",
+      properties: {
+        results: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              email: { type: "string", example: "user@example.com" },
+              sent: { type: "boolean", example: true },
+              reason: { type: "string", example: "duplicate" },
+            },
+          },
         },
-      ],
+      },
     },
     HealthResponse: {
-      status: "ok",
-      service: "lifecycle-emails-service",
+      type: "object",
+      properties: {
+        status: { type: "string", example: "ok" },
+        service: { type: "string", example: "lifecycle-emails-service" },
+      },
     },
     ErrorResponse: {
-      error: "Error message",
+      type: "object",
+      properties: {
+        error: { type: "string", example: "Error message" },
+        receivedKeys: {
+          type: "array",
+          items: { type: "string" },
+          description: "Keys found in request body (debug info)",
+        },
+      },
     },
   },
 };

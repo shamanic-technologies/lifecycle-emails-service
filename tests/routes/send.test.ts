@@ -105,31 +105,48 @@ describe("POST /send", () => {
     expect(body.runId).toBe("run-456");
   });
 
-  it("returns 400 when brandId or campaignId is missing", async () => {
+  it("returns 400 when appId or eventType is missing", async () => {
     const res1 = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
       .send({
-        appId: "mcpfactory",
-        eventType: "campaign_created",
+        eventType: "welcome",
         recipientEmail: "user@example.com",
       });
 
     expect(res1.status).toBe(400);
-    expect(res1.body.error).toContain("brandId");
-    expect(res1.body.error).toContain("campaignId");
+    expect(res1.body.error).toContain("appId");
 
     const res2 = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
       .send({
         appId: "mcpfactory",
-        eventType: "campaign_created",
-        brandId: "brand_abc",
         recipientEmail: "user@example.com",
       });
 
     expect(res2.status).toBe(400);
+    expect(res2.body.error).toContain("eventType");
+  });
+
+  it("succeeds without brandId/campaignId and defaults them to 'lifecycle' for Postmark", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "mcpfactory",
+        eventType: "user_active",
+        clerkUserId: "user_123",
+      });
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.brandId).toBe("lifecycle");
+    expect(body.campaignId).toBe("lifecycle");
   });
 
   it("passes brandId and campaignId to Postmark for campaign events", async () => {

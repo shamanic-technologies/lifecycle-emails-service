@@ -85,13 +85,12 @@ describe("validation", () => {
     expect(res.body.error).toMatch(/eventType/);
   });
 
-  it("rejects missing brandId or campaignId", async () => {
+  it("succeeds without brandId or campaignId", async () => {
     const res = await request(app)
       .post("/send")
       .set("x-api-key", API_KEY)
       .send({ appId: "mcpfactory", eventType: "waitlist", recipientEmail: "a@b.com" });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/brandId/);
+    expect(res.status).toBe(200);
   });
 
   it("rejects request with no recipient info", async () => {
