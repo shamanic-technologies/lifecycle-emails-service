@@ -3,6 +3,7 @@ import cors from "cors";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import healthRoutes from "./routes/health.js";
 import sendRoutes from "./routes/send.js";
+import statsRoutes from "./routes/stats.js";
 import openapiRoutes from "./routes/openapi.js";
 import { db } from "./db/index.js";
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use(healthRoutes);
 app.use(sendRoutes);
+app.use(statsRoutes);
 app.use(openapiRoutes);
 
 app.use((_req, res) => {

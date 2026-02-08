@@ -101,7 +101,7 @@ describe("POST /send", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.orgId).toBeNull();
+    expect(body.orgId).toBe("lifecycle-emails-service");
     expect(body.runId).toBe("run-456");
   });
 

@@ -34,6 +34,42 @@ Requires `x-api-key` header.
 
 One of `clerkUserId`, `clerkOrgId`, or `recipientEmail` is required.
 
+### `POST /stats`
+
+Requires `x-api-key` header.
+
+**Request body:**
+
+```json
+{
+  "appId": "mcpfactory",
+  "clerkOrgId": "org_xxx",
+  "clerkUserId": "user_xxx",
+  "eventType": "welcome"
+}
+```
+
+| Field          | Required | Description                              |
+| -------------- | -------- | ---------------------------------------- |
+| `appId`        | No       | Filter by app ID                         |
+| `clerkOrgId`   | No       | Filter by Clerk org ID                   |
+| `clerkUserId`  | No       | Filter by Clerk user ID                  |
+| `eventType`    | No       | Filter by event type                     |
+
+At least one filter is required.
+
+**Response:**
+
+```json
+{
+  "stats": {
+    "totalEmails": 42,
+    "sent": 40,
+    "failed": 2
+  }
+}
+```
+
 ### `GET /health`
 
 Returns `{ "status": "ok" }`.
@@ -120,6 +156,7 @@ src/
     health.ts           # Health check endpoint
     openapi.ts          # GET /openapi.json endpoint
     send.ts             # POST /send endpoint with dedup logic
+    stats.ts            # POST /stats endpoint for aggregated email stats
   templates/
     index.ts            # Template registry
     mcpfactory/         # MCP Factory app templates

@@ -48,13 +48,14 @@ describe("sendViaPostmark", () => {
     });
   });
 
-  it("sends orgId as null when not provided", async () => {
+  it("sends orgId as the provided string value", async () => {
     await sendViaPostmark({
       to: "test@example.com",
       subject: "Test",
       htmlBody: "<p>Test</p>",
       textBody: "Test",
       tag: "test-tag",
+      orgId: "lifecycle-emails-service",
       runId: "run_abc",
       appId: "mcpfactory",
       brandId: "lifecycle",
@@ -64,8 +65,8 @@ describe("sendViaPostmark", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body).toHaveProperty("orgId");
-    expect(body).toHaveProperty("runId", "run_abc");
+    expect(body.orgId).toBe("lifecycle-emails-service");
+    expect(body.runId).toBe("run_abc");
   });
 
   it("includes appId, brandId, and campaignId in the Postmark payload", async () => {
