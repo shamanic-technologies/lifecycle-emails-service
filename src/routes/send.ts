@@ -5,11 +5,7 @@ import { emailEvents } from "../db/schema.js";
 import { getTemplate } from "../templates/index.js";
 import { sendEmail } from "../lib/email-sending.js";
 import { resolveUserEmail, resolveOrgEmails } from "../lib/clerk.js";
-import {
-  ensureOrganization,
-  createRun,
-  updateRun,
-} from "../lib/runs-client.js";
+import { createRun, updateRun } from "../lib/runs-client.js";
 import { SendRequestSchema } from "../schemas.js";
 
 const router = Router();
@@ -103,16 +99,17 @@ router.post("/send", requireApiKey, async (req, res) => {
         : dedupKey;
 
       // Create a run in runs-service before sending
-      const externalOrgId = body.clerkOrgId || SYSTEM_ORG_ID;
-      let runsOrgId: string;
       let run: { id: string } | null = null;
 
       try {
-        runsOrgId = await ensureOrganization(externalOrgId);
         run = await createRun({
-          organizationId: runsOrgId,
+          clerkOrgId: body.clerkOrgId || SYSTEM_ORG_ID,
+          appId: body.appId,
           serviceName: "lifecycle-emails-service",
           taskName: `email-${body.eventType}`,
+          clerkUserId: body.clerkUserId,
+          brandId: body.brandId,
+          campaignId: body.campaignId,
         });
       } catch (runErr: any) {
         console.error(`Failed to create run for ${body.eventType}:`, runErr.message);
