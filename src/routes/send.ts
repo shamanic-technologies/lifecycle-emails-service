@@ -164,7 +164,7 @@ router.post("/send", requireApiKey, async (req, res) => {
           htmlBody: template.htmlBody,
           textBody: template.textBody,
           tag: `${body.appId}-${body.eventType}`,
-          orgId: body.clerkOrgId ?? null,
+          orgId: body.clerkOrgId || SYSTEM_ORG_ID,
           runId: run.id,
           appId: body.appId,
           brandId: body.brandId || "lifecycle",
@@ -178,7 +178,7 @@ router.post("/send", requireApiKey, async (req, res) => {
 
         // Mark run as failed
         try {
-          await updateRun(run.id, "failed", err.message);
+          await updateRun(run.id, "failed");
         } catch {
           // Best effort
         }

@@ -59,6 +59,29 @@ export const ErrorResponseSchema = z
   })
   .openapi("ErrorResponse");
 
+// --- POST /stats ---
+
+export const StatsRequestSchema = z
+  .object({
+    appId: z.string().optional(),
+    clerkOrgId: z.string().optional(),
+    clerkUserId: z.string().optional(),
+    eventType: z.string().optional(),
+  })
+  .openapi("StatsRequest");
+
+export type StatsRequest = z.infer<typeof StatsRequestSchema>;
+
+export const StatsResponseSchema = z
+  .object({
+    stats: z.object({
+      totalEmails: z.number(),
+      sent: z.number(),
+      failed: z.number(),
+    }),
+  })
+  .openapi("StatsResponse");
+
 // --- Register endpoints ---
 
 registry.registerPath({
@@ -96,6 +119,36 @@ registry.registerPath({
     },
     400: {
       description: "Validation error",
+      content: { "application/json": { schema: ErrorResponseSchema } },
+    },
+    401: {
+      description: "Unauthorized - invalid or missing API key",
+      content: { "application/json": { schema: ErrorResponseSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/stats",
+  summary: "Get aggregated stats",
+  description:
+    "Get aggregated email event stats filtered by appId, clerkOrgId, clerkUserId, and/or eventType. At least one filter required.",
+  tags: ["Stats"],
+  security: [{ apiKey: [] }],
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: StatsRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Aggregated stats",
+      content: { "application/json": { schema: StatsResponseSchema } },
+    },
+    400: {
+      description: "Validation error or missing filters",
       content: { "application/json": { schema: ErrorResponseSchema } },
     },
     401: {
