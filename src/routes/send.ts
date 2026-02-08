@@ -29,8 +29,8 @@ const SYSTEM_ORG_ID = "lifecycle-emails-service";
 interface SendRequest {
   appId: string;
   eventType: string;
-  brandId: string;
-  campaignId: string;
+  brandId?: string;
+  campaignId?: string;
   clerkUserId?: string;
   clerkOrgId?: string;
   recipientEmail?: string;
@@ -66,10 +66,13 @@ router.post("/send", requireApiKey, async (req, res) => {
   // #swagger.summary = 'Send a lifecycle email'
   // #swagger.description = 'Send a templated lifecycle email with deduplication support. Resolves recipients via Clerk user/org IDs or direct email.'
   // #swagger.security = [{ "apiKey": [] }]
-  /* #swagger.parameters['body'] = {
-    in: 'body',
+  /* #swagger.requestBody = {
     required: true,
-    schema: { $ref: '#/definitions/SendRequest' }
+    content: {
+      "application/json": {
+        schema: { $ref: '#/definitions/SendRequest' }
+      }
+    }
   } */
   /* #swagger.responses[200] = {
     description: 'Email send results',
@@ -86,8 +89,8 @@ router.post("/send", requireApiKey, async (req, res) => {
   try {
     const body = req.body as SendRequest;
 
-    if (!body.appId || !body.eventType || !body.brandId || !body.campaignId) {
-      res.status(400).json({ error: "appId, eventType, brandId, and campaignId are required" });
+    if (!body.appId || !body.eventType) {
+      res.status(400).json({ error: "appId and eventType are required" });
       return;
     }
 
@@ -196,8 +199,8 @@ router.post("/send", requireApiKey, async (req, res) => {
           orgId: body.clerkOrgId ?? null,
           runId: run.id,
           appId: body.appId,
-          brandId: body.brandId,
-          campaignId: body.campaignId,
+          brandId: body.brandId || "lifecycle",
+          campaignId: body.campaignId || "lifecycle",
         });
 
         await updateRun(run.id, "completed");
