@@ -9,8 +9,8 @@ vi.mock("../../src/lib/clerk.js", () => ({
   resolveOrgEmails: vi.fn().mockResolvedValue(["org1@test.com", "org2@test.com"]),
 }));
 
-vi.mock("../../src/lib/postmark.js", () => ({
-  sendViaPostmark: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../src/lib/email-sending.js", () => ({
+  sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../src/lib/runs-client.js", () => ({
@@ -22,7 +22,7 @@ vi.mock("../../src/lib/runs-client.js", () => ({
 import app from "../../src/index.js";
 import { db, sql } from "../../src/db/index.js";
 import { emailEvents } from "../../src/db/schema.js";
-import { sendViaPostmark } from "../../src/lib/postmark.js";
+import { sendEmail } from "../../src/lib/email-sending.js";
 import { resolveUserEmail } from "../../src/lib/clerk.js";
 
 const API_KEY = process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY!;
@@ -36,7 +36,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await sql`TRUNCATE TABLE email_events CASCADE`;
-  vi.mocked(sendViaPostmark).mockClear();
+  vi.mocked(sendEmail).mockClear();
   vi.mocked(resolveUserEmail).mockClear();
 });
 
@@ -115,7 +115,7 @@ describe("once-only dedup", () => {
       .send({ appId: "mcpfactory", eventType: "waitlist", ...BASE, recipientEmail: "new@example.com" });
     expect(res.status).toBe(200);
     expect(res.body.results[0].sent).toBe(true);
-    expect(vi.mocked(sendViaPostmark)).toHaveBeenCalledOnce();
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce();
   });
 
   it("blocks duplicate waitlist for same email", async () => {
@@ -175,7 +175,7 @@ describe("repeatable events", () => {
 
     expect(first.body.results[0].sent).toBe(true);
     expect(second.body.results[0].sent).toBe(true);
-    expect(vi.mocked(sendViaPostmark)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -232,8 +232,8 @@ describe("database records", () => {
     expect(rows[0].metadata).toEqual({ foo: "bar" });
   });
 
-  it("records failed status when postmark throws", async () => {
-    vi.mocked(sendViaPostmark).mockRejectedValueOnce(new Error("postmark down"));
+  it("records failed status when email sending throws", async () => {
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("email sending down"));
 
     const res = await request(app)
       .post("/send")
@@ -241,7 +241,7 @@ describe("database records", () => {
       .send({ appId: "mcpfactory", eventType: "waitlist", ...BASE, recipientEmail: "fail@test.com" });
 
     expect(res.body.results[0].sent).toBe(false);
-    expect(res.body.results[0].reason).toBe("postmark down");
+    expect(res.body.results[0].reason).toBe("email sending down");
 
     const rows = await db
       .select()
@@ -250,6 +250,6 @@ describe("database records", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe("failed");
-    expect(rows[0].errorMessage).toBe("postmark down");
+    expect(rows[0].errorMessage).toBe("email sending down");
   });
 });

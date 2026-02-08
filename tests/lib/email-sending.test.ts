@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.hoisted(() => {
-  process.env.POSTMARK_SERVICE_API_KEY = "test-api-key";
+  process.env.EMAIL_SENDING_SERVICE_API_KEY = "test-api-key";
 });
 
-import { sendViaPostmark } from "../../src/lib/postmark.js";
+import { sendEmail } from "../../src/lib/email-sending.js";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -17,9 +17,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("sendViaPostmark", () => {
-  it("includes orgId and runId in the Postmark payload", async () => {
-    await sendViaPostmark({
+describe("sendEmail", () => {
+  it("sends a transactional email via the email-sending service", async () => {
+    await sendEmail({
       to: "test@example.com",
       subject: "Test subject",
       htmlBody: "<p>Test</p>",
@@ -33,23 +33,30 @@ describe("sendViaPostmark", () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledOnce();
-    const [, options] = fetchSpy.mock.calls[0];
+    const [url, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
+    expect(url).toContain("/send");
     expect(body).toMatchObject({
-      from: expect.any(String),
+      type: "transactional",
       to: "test@example.com",
       subject: "Test subject",
-      orgId: "org_123",
+      clerkOrgId: "org_123",
       runId: "run_abc",
       appId: "mcpfactory",
       brandId: "brand_123",
       campaignId: "campaign_456",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "mcpfactory-user_active",
+      recipientFirstName: "",
+      recipientLastName: "",
+      recipientCompany: "",
     });
   });
 
-  it("sends orgId as the provided string value", async () => {
-    await sendViaPostmark({
+  it("maps orgId to clerkOrgId in the payload", async () => {
+    await sendEmail({
       to: "test@example.com",
       subject: "Test",
       htmlBody: "<p>Test</p>",
@@ -65,17 +72,18 @@ describe("sendViaPostmark", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.orgId).toBe("lifecycle-emails-service");
+    expect(body.clerkOrgId).toBe("lifecycle-emails-service");
     expect(body.runId).toBe("run_abc");
   });
 
-  it("includes appId, brandId, and campaignId in the Postmark payload", async () => {
-    await sendViaPostmark({
+  it("includes all required fields for email-sending service", async () => {
+    await sendEmail({
       to: "test@example.com",
       subject: "Test",
       htmlBody: "<p>Test</p>",
       textBody: "Test",
       tag: "test-tag",
+      orgId: "org_xyz",
       runId: "run_abc",
       appId: "mcpfactory",
       brandId: "brand_xyz",
@@ -85,8 +93,12 @@ describe("sendViaPostmark", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
+    expect(body.type).toBe("transactional");
     expect(body.appId).toBe("mcpfactory");
     expect(body.brandId).toBe("brand_xyz");
     expect(body.campaignId).toBe("campaign_789");
+    expect(body.recipientFirstName).toBe("");
+    expect(body.recipientLastName).toBe("");
+    expect(body.recipientCompany).toBe("");
   });
 });

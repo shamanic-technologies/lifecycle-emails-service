@@ -1,0 +1,50 @@
+const EMAIL_SENDING_URL = process.env.EMAIL_SENDING_SERVICE_URL || "https://email-sending.mcpfactory.org";
+const EMAIL_SENDING_API_KEY = process.env.EMAIL_SENDING_SERVICE_API_KEY;
+
+interface SendEmailParams {
+  to: string;
+  subject: string;
+  htmlBody: string;
+  textBody: string;
+  tag: string;
+  orgId: string;
+  runId: string;
+  appId: string;
+  brandId: string;
+  campaignId: string;
+}
+
+export async function sendEmail(params: SendEmailParams): Promise<void> {
+  if (!EMAIL_SENDING_API_KEY) {
+    throw new Error("EMAIL_SENDING_SERVICE_API_KEY is not configured");
+  }
+
+  const response = await fetch(`${EMAIL_SENDING_URL}/send`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": EMAIL_SENDING_API_KEY,
+    },
+    body: JSON.stringify({
+      type: "transactional",
+      appId: params.appId,
+      brandId: params.brandId,
+      campaignId: params.campaignId,
+      runId: params.runId,
+      clerkOrgId: params.orgId,
+      to: params.to,
+      recipientFirstName: "",
+      recipientLastName: "",
+      recipientCompany: "",
+      subject: params.subject,
+      htmlBody: params.htmlBody,
+      textBody: params.textBody,
+      tag: params.tag,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(`Email sending failed (${response.status}): ${JSON.stringify(errorBody)}`);
+  }
+}

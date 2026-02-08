@@ -3,7 +3,7 @@ import { requireApiKey } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { emailEvents } from "../db/schema.js";
 import { getTemplate } from "../templates/index.js";
-import { sendViaPostmark } from "../lib/postmark.js";
+import { sendEmail } from "../lib/email-sending.js";
 import { resolveUserEmail, resolveOrgEmails } from "../lib/clerk.js";
 import {
   ensureOrganization,
@@ -157,8 +157,8 @@ router.post("/send", requireApiKey, async (req, res) => {
           });
         }
 
-        // Send via Postmark with the real run ID
-        await sendViaPostmark({
+        // Send via email-sending service
+        await sendEmail({
           to: email,
           subject: template.subject,
           htmlBody: template.htmlBody,

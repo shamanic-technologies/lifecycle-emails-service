@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.hoisted(() => {
-  process.env.POSTMARK_SERVICE_API_KEY = "test-api-key";
+  process.env.EMAIL_SENDING_SERVICE_API_KEY = "test-api-key";
   process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY = "test-service-key";
 });
 
@@ -51,7 +51,7 @@ afterEach(() => {
 });
 
 describe("POST /send", () => {
-  it("creates a run and passes all required fields to Postmark service", async () => {
+  it("creates a run and passes all required fields to email-sending service", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
@@ -70,9 +70,9 @@ describe("POST /send", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.orgId).toBe("org_456");
+    expect(body.type).toBe("transactional");
+    expect(body.clerkOrgId).toBe("org_456");
     expect(body.runId).toBe("run-456");
-    expect(body.from).toBeDefined();
     expect(body.to).toBeDefined();
     expect(body.subject).toBeDefined();
     expect(body.appId).toBe("mcpfactory");
@@ -101,7 +101,7 @@ describe("POST /send", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.orgId).toBe("lifecycle-emails-service");
+    expect(body.clerkOrgId).toBe("lifecycle-emails-service");
     expect(body.runId).toBe("run-456");
   });
 
@@ -131,7 +131,7 @@ describe("POST /send", () => {
     expect(res2.body.details.fieldErrors).toHaveProperty("eventType");
   });
 
-  it("succeeds without brandId/campaignId and defaults them to 'lifecycle' for Postmark", async () => {
+  it("succeeds without brandId/campaignId and defaults them to 'lifecycle'", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
@@ -151,7 +151,7 @@ describe("POST /send", () => {
     expect(body.campaignId).toBe("lifecycle");
   });
 
-  it("passes brandId and campaignId to Postmark for campaign events", async () => {
+  it("passes brandId and campaignId for campaign events", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
