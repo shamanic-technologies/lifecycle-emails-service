@@ -149,7 +149,7 @@ src/
   lib/
     clerk.ts            # Clerk user/org email resolution
     email-sending.ts    # Email Sending Service client
-    runs-client.ts      # Runs service client for tracking email operations
+    runs-client.ts      # Runs service client (create/update runs via clerkOrgId)
   middleware/
     auth.ts             # API key authentication
   routes/

@@ -26,7 +26,6 @@ vi.mock("../../src/lib/clerk.js", () => ({
 
 // Mock runs-client to avoid external calls
 vi.mock("../../src/lib/runs-client.js", () => ({
-  ensureOrganization: vi.fn().mockResolvedValue("runs-org-123"),
   createRun: vi.fn().mockResolvedValue({ id: "run-456" }),
   updateRun: vi.fn().mockResolvedValue({}),
 }));
@@ -81,7 +80,7 @@ describe("POST /send", () => {
   });
 
   it("uses system org when clerkOrgId is not provided", async () => {
-    const { ensureOrganization } = await import("../../src/lib/runs-client.js");
+    const { createRun } = await import("../../src/lib/runs-client.js");
 
     const res = await request(app)
       .post("/send")
@@ -96,7 +95,9 @@ describe("POST /send", () => {
 
     expect(res.status).toBe(200);
 
-    expect(ensureOrganization).toHaveBeenCalledWith("lifecycle-emails-service");
+    expect(createRun).toHaveBeenCalledWith(
+      expect.objectContaining({ clerkOrgId: "lifecycle-emails-service" })
+    );
 
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);

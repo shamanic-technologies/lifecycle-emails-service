@@ -14,7 +14,6 @@ vi.mock("../../src/lib/email-sending.js", () => ({
 }));
 
 vi.mock("../../src/lib/runs-client.js", () => ({
-  ensureOrganization: vi.fn().mockResolvedValue("runs-org-123"),
   createRun: vi.fn().mockResolvedValue({ id: "run-456" }),
   updateRun: vi.fn().mockResolvedValue({}),
 }));
