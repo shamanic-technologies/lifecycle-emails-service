@@ -1,6 +1,6 @@
 # Lifecycle Emails Service
 
-Transactional email service that sends lifecycle emails triggered by user events. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via Postmark.
+Transactional email service that sends lifecycle emails triggered by user events. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via the Email Sending Service.
 
 ## API
 
@@ -25,8 +25,8 @@ Requires `x-api-key` header.
 | ---------------- | -------- | ---------------------------------------- |
 | `appId`          | Yes      | App identifier (e.g. `mcpfactory`)       |
 | `eventType`      | Yes      | Event type (see below)                   |
-| `brandId`        | No       | Brand ID for Postmark tracking (defaults to `"lifecycle"`) |
-| `campaignId`     | No       | Campaign ID for Postmark tracking (defaults to `"lifecycle"`) |
+| `brandId`        | No       | Brand ID for tracking (defaults to `"lifecycle"`) |
+| `campaignId`     | No       | Campaign ID for tracking (defaults to `"lifecycle"`) |
 | `clerkUserId`    | No       | Clerk user ID to resolve email           |
 | `clerkOrgId`     | No       | Clerk org ID to send to all members      |
 | `recipientEmail` | No       | Direct email (fallback if no Clerk IDs)  |
@@ -95,7 +95,7 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 - **Runtime:** Node 20, TypeScript (ESM)
 - **Framework:** Express
 - **Database:** PostgreSQL via Drizzle ORM
-- **Email delivery:** Postmark
+- **Email delivery:** Email Sending Service (unified gateway)
 - **User resolution:** Clerk
 - **Validation & OpenAPI:** Zod + @asteasolutions/zod-to-openapi
 - **Deployment:** Railway (Docker)
@@ -115,8 +115,8 @@ npm run dev             # start dev server on PORT
 | -------- | ----------- |
 | `LIFECYCLE_EMAILS_SERVICE_DATABASE_URL` | PostgreSQL connection string |
 | `LIFECYCLE_EMAILS_SERVICE_API_KEY` | API key for authenticating requests |
-| `POSTMARK_SERVICE_URL` | Postmark service endpoint |
-| `POSTMARK_SERVICE_API_KEY` | Postmark API key |
+| `EMAIL_SENDING_SERVICE_URL` | Email Sending Service endpoint (default: https://email-sending.mcpfactory.org) |
+| `EMAIL_SENDING_SERVICE_API_KEY` | Email Sending Service API key |
 | `RUNS_SERVICE_URL` | Runs service endpoint (default: http://localhost:3006) |
 | `RUNS_SERVICE_API_KEY` | Runs service API key |
 | `CLERK_SECRET_KEY` | Clerk secret key for user resolution |
@@ -148,7 +148,7 @@ src/
     schema.ts           # Drizzle schema (email_events table)
   lib/
     clerk.ts            # Clerk user/org email resolution
-    postmark.ts         # Postmark email sending
+    email-sending.ts    # Email Sending Service client
     runs-client.ts      # Runs service client for tracking email operations
   middleware/
     auth.ts             # API key authentication
