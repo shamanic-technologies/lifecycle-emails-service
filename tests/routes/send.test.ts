@@ -115,7 +115,8 @@ describe("POST /send", () => {
       });
 
     expect(res1.status).toBe(400);
-    expect(res1.body.error).toContain("appId");
+    expect(res1.body.error).toBe("Invalid request");
+    expect(res1.body.details.fieldErrors).toHaveProperty("appId");
 
     const res2 = await request(app)
       .post("/send")
@@ -126,7 +127,8 @@ describe("POST /send", () => {
       });
 
     expect(res2.status).toBe(400);
-    expect(res2.body.error).toContain("eventType");
+    expect(res2.body.error).toBe("Invalid request");
+    expect(res2.body.details.fieldErrors).toHaveProperty("eventType");
   });
 
   it("succeeds without brandId/campaignId and defaults them to 'lifecycle' for Postmark", async () => {
