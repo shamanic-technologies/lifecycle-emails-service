@@ -10,6 +10,7 @@ import {
   createRun,
   updateRun,
 } from "../lib/runs-client.js";
+import { SendRequestSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -26,22 +27,11 @@ const ADMIN_NOTIFICATION_EVENTS = new Set(["signup_notification", "signin_notifi
 // System org ID for runs without a user org (admin notifications, etc.)
 const SYSTEM_ORG_ID = "lifecycle-emails-service";
 
-interface SendRequest {
-  appId: string;
-  eventType: string;
-  brandId?: string;
-  campaignId?: string;
-  clerkUserId?: string;
-  clerkOrgId?: string;
-  recipientEmail?: string;
-  metadata?: Record<string, unknown>;
-}
-
 function getTodayDate(): string {
   return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 }
 
-function buildDedupKey(appId: string, eventType: string, req: SendRequest): string | null {
+function buildDedupKey(appId: string, eventType: string, req: { clerkUserId?: string; recipientEmail?: string }): string | null {
   // Daily dedup: one per user per day
   if (DAILY_DEDUP_EVENTS.has(eventType)) {
     const identifier = req.clerkUserId || req.recipientEmail || "unknown";
@@ -62,37 +52,14 @@ function buildDedupKey(appId: string, eventType: string, req: SendRequest): stri
 }
 
 router.post("/send", requireApiKey, async (req, res) => {
-  // #swagger.tags = ['Email']
-  // #swagger.summary = 'Send a lifecycle email'
-  // #swagger.description = 'Send a templated lifecycle email with deduplication support. Resolves recipients via Clerk user/org IDs or direct email.'
-  // #swagger.security = [{ "apiKey": [] }]
-  /* #swagger.requestBody = {
-    required: true,
-    content: {
-      "application/json": {
-        schema: { $ref: '#/definitions/SendRequest' }
-      }
-    }
-  } */
-  /* #swagger.responses[200] = {
-    description: 'Email send results',
-    schema: { $ref: '#/definitions/SendResponse' }
-  } */
-  /* #swagger.responses[400] = {
-    description: 'Validation error',
-    schema: { $ref: '#/definitions/ErrorResponse' }
-  } */
-  /* #swagger.responses[401] = {
-    description: 'Unauthorized - invalid or missing API key',
-    schema: { $ref: '#/definitions/ErrorResponse' }
-  } */
   try {
-    const body = req.body as SendRequest;
-
-    if (!body.appId || !body.eventType) {
-      res.status(400).json({ error: "appId and eventType are required" });
+    const parsed = SendRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
       return;
     }
+
+    const body = parsed.data;
 
     // Resolve recipient emails
     let recipientEmails: string[];
@@ -112,10 +79,11 @@ router.post("/send", requireApiKey, async (req, res) => {
     }
 
     // For admin notifications, enrich metadata with the user's email
-    if (ADMIN_NOTIFICATION_EVENTS.has(body.eventType) && body.clerkUserId && !body.metadata?.email) {
+    const metadata = { ...body.metadata };
+    if (ADMIN_NOTIFICATION_EVENTS.has(body.eventType) && body.clerkUserId && !metadata.email) {
       try {
         const userEmail = await resolveUserEmail(body.clerkUserId);
-        body.metadata = { ...body.metadata, email: userEmail };
+        metadata.email = userEmail;
       } catch {
         // Continue without email in metadata
       }
@@ -123,7 +91,7 @@ router.post("/send", requireApiKey, async (req, res) => {
 
     // Get template
     const templateFn = getTemplate(body.appId, body.eventType);
-    const template = templateFn(body.metadata);
+    const template = templateFn(metadata as Record<string, unknown>);
 
     const dedupKey = buildDedupKey(body.appId, body.eventType, body);
     const results: Array<{ email: string; sent: boolean; reason?: string }> = [];
@@ -165,7 +133,7 @@ router.post("/send", requireApiKey, async (req, res) => {
               clerkUserId: body.clerkUserId || null,
               clerkOrgId: body.clerkOrgId || null,
               status: "sent",
-              metadata: body.metadata || null,
+              metadata: metadata || null,
             })
             .onConflictDoNothing({ target: emailEvents.dedupKey })
             .returning();
@@ -185,7 +153,7 @@ router.post("/send", requireApiKey, async (req, res) => {
             clerkUserId: body.clerkUserId || null,
             clerkOrgId: body.clerkOrgId || null,
             status: "sent",
-            metadata: body.metadata || null,
+            metadata: metadata || null,
           });
         }
 

@@ -61,6 +61,7 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 - **Database:** PostgreSQL via Drizzle ORM
 - **Email delivery:** Postmark
 - **User resolution:** Clerk
+- **Validation & OpenAPI:** Zod + @asteasolutions/zod-to-openapi
 - **Deployment:** Railway (Docker)
 
 ## Setup
@@ -92,7 +93,7 @@ npm run dev             # start dev server on PORT
 | ------ | ----------- |
 | `npm run dev` | Start dev server with hot reload |
 | `npm run build` | Compile TypeScript to `dist/` and generate OpenAPI spec |
-| `npm run generate:openapi` | Generate `openapi.json` from route annotations |
+| `npm run generate:openapi` | Generate `openapi.json` from Zod schemas |
 | `npm start` | Run compiled server |
 | `npm test` | Run tests (Vitest) |
 | `npm run db:generate` | Generate Drizzle migrations |
@@ -105,6 +106,7 @@ npm run dev             # start dev server on PORT
 ```
 src/
   index.ts              # Express app entry point
+  schemas.ts            # Zod schemas + OpenAPI registry (single source of truth)
   db/
     index.ts            # Database connection
     schema.ts           # Drizzle schema (email_events table)
@@ -130,5 +132,5 @@ src/
       campaign-stopped.ts
       user-active.ts
 scripts/
-  generate-openapi.ts   # OpenAPI spec generation via swagger-autogen
+  generate-openapi.ts   # OpenAPI spec generation via zod-to-openapi
 ```

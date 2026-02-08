@@ -73,7 +73,8 @@ describe("validation", () => {
       .set("x-api-key", API_KEY)
       .send({ eventType: "waitlist", ...BASE, recipientEmail: "a@b.com" });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/appId/);
+    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.details.fieldErrors).toHaveProperty("appId");
   });
 
   it("rejects missing eventType", async () => {
@@ -82,7 +83,8 @@ describe("validation", () => {
       .set("x-api-key", API_KEY)
       .send({ appId: "mcpfactory", ...BASE, recipientEmail: "a@b.com" });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/eventType/);
+    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.details.fieldErrors).toHaveProperty("eventType");
   });
 
   it("succeeds without brandId or campaignId", async () => {
