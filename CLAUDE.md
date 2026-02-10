@@ -1,19 +1,33 @@
-# Project Rules
+# Project: Lifecycle Emails Service
 
-## Mandatory: Tests for Every Bug Fix / Issue
+Transactional email service that sends lifecycle emails triggered by user events. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via the Email Sending Service.
 
-When working on any bug fix or issue:
+## Commands
 
-1. **Write a regression test first** — before fixing the code, create a test in `tests/` that reproduces the bug and fails.
-2. **Then fix the code** — make the test pass.
-3. **Test file naming** — use `tests/<module>.test.ts` matching the source file (e.g., `src/routes/send.ts` → `tests/routes/send.test.ts`).
-4. **CI must pass** — all tests run in GitHub Actions on every push and PR. Never merge without green CI.
+- `npm test` — run tests (Vitest)
+- `npm run test:unit` — run unit tests only
+- `npm run test:integration` — run integration tests only
+- `npm run build` — compile TypeScript + generate OpenAPI spec
+- `npm run dev` — local dev server with hot reload
+- `npm start` — run compiled server
+- `npm run generate:openapi` — regenerate `openapi.json`
+- `npm run db:generate` — generate Drizzle migrations
+- `npm run db:migrate` — run Drizzle migrations
+- `npm run db:push` — push schema directly to database
+- `npm run db:studio` — open Drizzle Studio
 
-This ensures every past bug is permanently guarded against regression.
+## Architecture
 
-## Test Stack
-
-- **Framework:** Vitest (`npm run test`)
-- **HTTP testing:** Supertest
-- **Run unit only:** `npm run test:unit`
-- **Run integration only:** `npm run test:integration`
+- `src/schemas.ts` — Zod schemas (source of truth for validation + OpenAPI)
+- `src/index.ts` — Express app entry point
+- `src/routes/` — Route handlers (`send.ts`, `stats.ts`, `health.ts`, `openapi.ts`)
+- `src/middleware/auth.ts` — API key authentication
+- `src/lib/clerk.ts` — Clerk user/org email resolution
+- `src/lib/email-sending.ts` — Email Sending Service client
+- `src/lib/runs-client.ts` — Runs service client (create/update runs)
+- `src/db/schema.ts` — Drizzle schema (`email_events` table)
+- `src/db/index.ts` — Database connection
+- `src/templates/` — Email templates (HTML + text), organized by app (`mcpfactory/`)
+- `scripts/generate-openapi.ts` — OpenAPI spec generation script
+- `tests/` — Test files (`*.test.ts`)
+- `openapi.json` — Auto-generated, do NOT edit manually
