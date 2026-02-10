@@ -161,7 +161,7 @@ router.post("/send", requireApiKey, async (req, res) => {
           htmlBody: template.htmlBody,
           textBody: template.textBody,
           tag: `${body.appId}-${body.eventType}`,
-          orgId: body.clerkOrgId || SYSTEM_ORG_ID,
+          orgId: body.clerkOrgId,
           runId: run.id,
           appId: body.appId,
           brandId: body.brandId || "lifecycle",
