@@ -62,7 +62,7 @@ describe("sendEmail", () => {
       htmlBody: "<p>Test</p>",
       textBody: "Test",
       tag: "test-tag",
-      orgId: "lifecycle-emails-service",
+      orgId: "org_real_123",
       runId: "run_abc",
       appId: "mcpfactory",
       brandId: "lifecycle",
@@ -72,7 +72,27 @@ describe("sendEmail", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.clerkOrgId).toBe("lifecycle-emails-service");
+    expect(body.clerkOrgId).toBe("org_real_123");
+    expect(body.runId).toBe("run_abc");
+  });
+
+  it("omits clerkOrgId from payload when orgId is undefined", async () => {
+    await sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+      appId: "mcpfactory",
+      brandId: "lifecycle",
+      campaignId: "lifecycle-test",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.clerkOrgId).toBeUndefined();
     expect(body.runId).toBe("run_abc");
   });
 

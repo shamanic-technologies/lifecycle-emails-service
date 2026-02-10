@@ -79,7 +79,7 @@ describe("POST /send", () => {
     expect(body.campaignId).toBe("campaign_def");
   });
 
-  it("uses system org when clerkOrgId is not provided", async () => {
+  it("uses system org for createRun but omits clerkOrgId from email-sending when not provided", async () => {
     const { createRun } = await import("../../src/lib/runs-client.js");
 
     const res = await request(app)
@@ -95,14 +95,16 @@ describe("POST /send", () => {
 
     expect(res.status).toBe(200);
 
+    // createRun should still use the system org ID
     expect(createRun).toHaveBeenCalledWith(
       expect.objectContaining({ clerkOrgId: "lifecycle-emails-service" })
     );
 
+    // email-sending should NOT receive a fake clerkOrgId
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.clerkOrgId).toBe("lifecycle-emails-service");
+    expect(body.clerkOrgId).toBeUndefined();
     expect(body.runId).toBe("run-456");
   });
 
