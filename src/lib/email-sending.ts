@@ -10,8 +10,8 @@ interface SendEmailParams {
   orgId?: string;
   runId: string;
   appId: string;
-  brandId: string;
-  campaignId: string;
+  brandId?: string;
+  campaignId?: string;
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
@@ -28,8 +28,8 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     body: JSON.stringify({
       type: "transactional",
       appId: params.appId,
-      brandId: params.brandId,
-      campaignId: params.campaignId,
+      ...(params.brandId && { brandId: params.brandId }),
+      ...(params.campaignId && { campaignId: params.campaignId }),
       runId: params.runId,
       ...(params.orgId && { clerkOrgId: params.orgId }),
       to: params.to,

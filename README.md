@@ -25,8 +25,8 @@ Requires `x-api-key` header.
 | ---------------- | -------- | ---------------------------------------- |
 | `appId`          | Yes      | App identifier (e.g. `mcpfactory`)       |
 | `eventType`      | Yes      | Event type (see below)                   |
-| `brandId`        | No       | Brand ID for tracking (defaults to `"lifecycle"`) |
-| `campaignId`     | No       | Campaign ID for tracking (defaults to `"lifecycle"`) |
+| `brandId`        | No       | Brand ID (UUID) for tracking; omitted if not provided |
+| `campaignId`     | No       | Campaign ID for tracking; omitted if not provided |
 | `clerkUserId`    | No       | Clerk user ID to resolve email           |
 | `clerkOrgId`     | No       | Clerk org ID to send to all members      |
 | `recipientEmail` | No       | Direct email (fallback if no Clerk IDs)  |

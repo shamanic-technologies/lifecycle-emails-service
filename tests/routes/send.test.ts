@@ -134,7 +134,7 @@ describe("POST /send", () => {
     expect(res2.body.details.fieldErrors).toHaveProperty("eventType");
   });
 
-  it("succeeds without brandId/campaignId and defaults them to 'lifecycle'", async () => {
+  it("succeeds without brandId/campaignId and omits them from request", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
@@ -150,8 +150,8 @@ describe("POST /send", () => {
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 
-    expect(body.brandId).toBe("lifecycle");
-    expect(body.campaignId).toBe("lifecycle");
+    expect(body.brandId).toBeUndefined();
+    expect(body.campaignId).toBeUndefined();
   });
 
   it("passes brandId and campaignId for campaign events", async () => {
