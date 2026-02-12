@@ -164,8 +164,8 @@ router.post("/send", requireApiKey, async (req, res) => {
           orgId: body.clerkOrgId,
           runId: run.id,
           appId: body.appId,
-          brandId: body.brandId || "lifecycle",
-          campaignId: body.campaignId || "lifecycle",
+          brandId: body.brandId,
+          campaignId: body.campaignId,
         });
 
         await updateRun(run.id, "completed");
