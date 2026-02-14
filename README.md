@@ -16,6 +16,7 @@ Requires `x-api-key` header.
   "eventType": "welcome",
   "brandId": "brand_xxx",
   "campaignId": "campaign_xxx",
+  "productId": "webinar-2026-03-01",
   "clerkUserId": "user_xxx",
   "metadata": { "name": "Alice" }
 }
@@ -27,6 +28,7 @@ Requires `x-api-key` header.
 | `eventType`      | Yes      | Event type (see below)                   |
 | `brandId`        | No       | Brand ID (UUID) for tracking; omitted if not provided |
 | `campaignId`     | No       | Campaign ID for tracking; omitted if not provided |
+| `productId`      | No       | Product/instance ID for product-scoped dedup (e.g. webinar ID) |
 | `clerkUserId`    | No       | Clerk user ID to resolve email           |
 | `clerkOrgId`     | No       | Clerk org ID to send to all members      |
 | `recipientEmail` | No       | Direct email (fallback if no Clerk IDs)  |
@@ -83,12 +85,26 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 | Event               | Dedup Strategy | Recipient |
 | ------------------- | -------------- | --------- |
 | `waitlist`          | Once per email | User      |
-| `welcome`           | Once per user  | User      |
+| `welcome`           | Once per user/email | User  |
 | `signup_notification` | Once per user | Admin     |
 | `signin_notification` | None (repeatable) | Admin |
 | `campaign_created`  | None (repeatable) | User   |
 | `campaign_stopped`  | None (repeatable) | User   |
 | `user_active`       | Daily per user | Admin     |
+
+## Event Types (generic)
+
+Product-scoped events for webinar/event lifecycle emails. Require `productId` and `recipientEmail`.
+
+| Event               | Dedup Strategy              | Recipient |
+| ------------------- | --------------------------- | --------- |
+| `webinar_welcome`   | Once per email × product    | User      |
+| `j_minus_3`         | Once per email × product    | User      |
+| `j_minus_2`         | Once per email × product    | User      |
+| `j_minus_1`         | Once per email × product    | User      |
+| `j_day`             | Once per email × product    | User      |
+
+Dedup key format: `{appId}:{eventType}:{recipientEmail}:{productId}`
 
 ## Tech Stack
 
@@ -168,6 +184,13 @@ src/
       campaign-created.ts
       campaign-stopped.ts
       user-active.ts
+    generic/            # Generic webinar/event templates
+      layout.ts         # Minimal unbranded layout
+      webinar-welcome.ts
+      j-minus-3.ts
+      j-minus-2.ts
+      j-minus-1.ts
+      j-day.ts
 scripts/
   generate-openapi.ts   # OpenAPI spec generation via zod-to-openapi
 ```
