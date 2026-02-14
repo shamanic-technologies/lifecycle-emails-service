@@ -163,6 +163,100 @@ describe("daily dedup", () => {
   });
 });
 
+// --- Product-scoped dedup ---
+
+describe("product-scoped dedup", () => {
+  it("sends webinar_welcome with productId on first request", async () => {
+    const res = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({
+        appId: "generic",
+        eventType: "webinar_welcome",
+        recipientEmail: "marie@test.com",
+        productId: "webinar-2026-02-28",
+        metadata: { productName: "Launch Webinar" },
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].sent).toBe(true);
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce();
+  });
+
+  it("blocks duplicate webinar_welcome for same user + product", async () => {
+    const payload = {
+      appId: "generic",
+      eventType: "webinar_welcome",
+      recipientEmail: "marie@test.com",
+      productId: "webinar-2026-03-01",
+      metadata: { productName: "Launch Webinar" },
+    };
+
+    await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const res = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(res.body.results[0].sent).toBe(false);
+    expect(res.body.results[0].reason).toBe("duplicate");
+  });
+
+  it("allows same user for different products", async () => {
+    const base = {
+      appId: "generic",
+      eventType: "webinar_welcome",
+      recipientEmail: "marie@test.com",
+      metadata: { productName: "Webinar" },
+    };
+
+    const first = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ ...base, productId: "webinar-A" });
+    const second = await request(app)
+      .post("/send")
+      .set("x-api-key", API_KEY)
+      .send({ ...base, productId: "webinar-B" });
+
+    expect(first.body.results[0].sent).toBe(true);
+    expect(second.body.results[0].sent).toBe(true);
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(2);
+  });
+
+  it("deduplicates j_minus_3 per user x product", async () => {
+    const payload = {
+      appId: "generic",
+      eventType: "j_minus_3",
+      recipientEmail: "bob@test.com",
+      productId: "webinar-2026-03-15",
+      metadata: { productName: "AI Workshop" },
+    };
+
+    const first = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const second = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(first.body.results[0].sent).toBe(true);
+    expect(second.body.results[0].sent).toBe(false);
+    expect(second.body.results[0].reason).toBe("duplicate");
+  });
+});
+
+// --- Anonymous welcome dedup ---
+
+describe("anonymous welcome dedup", () => {
+  it("deduplicates welcome by recipientEmail when no clerkUserId", async () => {
+    const payload = {
+      appId: "mcpfactory",
+      eventType: "welcome",
+      recipientEmail: "anon@test.com",
+    };
+
+    const first = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const second = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(first.body.results[0].sent).toBe(true);
+    expect(second.body.results[0].sent).toBe(false);
+    expect(second.body.results[0].reason).toBe("duplicate");
+  });
+});
+
 // --- Repeatable events ---
 
 describe("repeatable events", () => {

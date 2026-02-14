@@ -16,6 +16,7 @@ export const SendRequestSchema = z
     eventType: z.string(),
     brandId: z.string().optional(),
     campaignId: z.string().optional(),
+    productId: z.string().optional(),
     clerkUserId: z.string().optional(),
     clerkOrgId: z.string().optional(),
     recipientEmail: z.string().email().optional(),

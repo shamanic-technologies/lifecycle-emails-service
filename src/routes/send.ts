@@ -16,6 +16,9 @@ const ONCE_ONLY_EVENTS = new Set(["waitlist", "welcome", "signup_notification"])
 // Event types deduped per day (one per user per day)
 const DAILY_DEDUP_EVENTS = new Set(["user_active"]);
 
+// Event types deduped per user × product (one per recipient per product instance)
+const PRODUCT_SCOPED_EVENTS = new Set(["webinar_welcome", "j_minus_3", "j_minus_2", "j_minus_1", "j_day"]);
+
 // Events where recipient is hardcoded to admin
 const ADMIN_EMAIL = "kevin@mcpfactory.org";
 const ADMIN_NOTIFICATION_EVENTS = new Set(["signup_notification", "signin_notification", "user_active"]);
@@ -27,7 +30,15 @@ function getTodayDate(): string {
   return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 }
 
-function buildDedupKey(appId: string, eventType: string, req: { clerkUserId?: string; recipientEmail?: string }): string | null {
+function buildDedupKey(appId: string, eventType: string, req: { clerkUserId?: string; recipientEmail?: string; productId?: string }): string | null {
+  // Product-scoped dedup: one per recipient per product instance
+  if (PRODUCT_SCOPED_EVENTS.has(eventType)) {
+    if (req.recipientEmail && req.productId) {
+      return `${appId}:${eventType}:${req.recipientEmail}:${req.productId}`;
+    }
+    return null; // missing required fields, skip dedup
+  }
+
   // Daily dedup: one per user per day
   if (DAILY_DEDUP_EVENTS.has(eventType)) {
     const identifier = req.clerkUserId || req.recipientEmail || "unknown";
@@ -41,6 +52,10 @@ function buildDedupKey(appId: string, eventType: string, req: { clerkUserId?: st
     }
     if (req.clerkUserId) {
       return `${appId}:${eventType}:${req.clerkUserId}`;
+    }
+    // Anonymous fallback: dedup on email for once-only events
+    if (req.recipientEmail) {
+      return `${appId}:${eventType}:${req.recipientEmail}`;
     }
   }
 
