@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.hoisted(() => {
-  process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY = "test-service-key";
+  process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY = "test-service-key";
 });
 
 // Mock db

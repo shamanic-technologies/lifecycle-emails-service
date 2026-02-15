@@ -11,6 +11,6 @@ describe("GET /openapi.json", () => {
     const res = await request(app).get("/openapi.json");
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("info");
-    expect(res.body.info.title).toBe("Lifecycle Emails Service");
+    expect(res.body.info.title).toBe("Transactional Email Service");
   });
 });

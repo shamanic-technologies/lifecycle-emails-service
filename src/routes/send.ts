@@ -3,7 +3,7 @@ import { requireApiKey } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { emailEvents } from "../db/schema.js";
 import { getTemplate } from "../templates/index.js";
-import { sendEmail } from "../lib/email-sending.js";
+import { sendEmail } from "../lib/email-gateway.js";
 import { resolveUserEmail, resolveOrgEmails } from "../lib/clerk.js";
 import { createRun, updateRun } from "../lib/runs-client.js";
 import { SendRequestSchema } from "../schemas.js";
@@ -24,7 +24,7 @@ const ADMIN_EMAIL = "kevin@mcpfactory.org";
 const ADMIN_NOTIFICATION_EVENTS = new Set(["signup_notification", "signin_notification", "user_active"]);
 
 // System org ID for runs without a user org (admin notifications, etc.)
-const SYSTEM_ORG_ID = "lifecycle-emails-service";
+const SYSTEM_ORG_ID = "transactional-email-service";
 
 function getTodayDate(): string {
   return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
@@ -120,7 +120,7 @@ router.post("/send", requireApiKey, async (req, res) => {
         run = await createRun({
           clerkOrgId: body.clerkOrgId || SYSTEM_ORG_ID,
           appId: body.appId,
-          serviceName: "lifecycle-emails-service",
+          serviceName: "transactional-email-service",
           taskName: `email-${body.eventType}`,
           clerkUserId: body.clerkUserId,
           brandId: body.brandId,
@@ -169,7 +169,7 @@ router.post("/send", requireApiKey, async (req, res) => {
           });
         }
 
-        // Send via email-sending service
+        // Send via email gateway
         await sendEmail({
           to: email,
           subject: template.subject,

@@ -28,7 +28,7 @@ if (process.env.NODE_ENV !== "test") {
     .then(() => {
       console.log("Migrations complete");
       app.listen(Number(PORT), "::", () => {
-        console.log(`Lifecycle emails service running on port ${PORT}`);
+        console.log(`Transactional email service running on port ${PORT}`);
       });
     })
     .catch((err) => {

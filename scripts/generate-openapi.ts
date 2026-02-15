@@ -7,8 +7,8 @@ const generator = new OpenApiGeneratorV3(registry.definitions);
 const document = generator.generateDocument({
   openapi: "3.0.0",
   info: {
-    title: "Lifecycle Emails Service",
-    description: "Transactional and lifecycle email service",
+    title: "Transactional Email Service",
+    description: "Transactional email service with templating, deduplication, and recipient resolution",
     version: "1.0.0",
   },
   servers: [

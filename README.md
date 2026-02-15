@@ -1,6 +1,6 @@
-# Lifecycle Emails Service
+# Transactional Email Service
 
-Transactional email service that sends lifecycle emails triggered by user events. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via the Email Sending Service.
+Transactional email service that sends event-triggered emails. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via the Email Gateway.
 
 ## API
 
@@ -94,7 +94,7 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 
 ## Event Types (generic)
 
-Product-scoped events for webinar/event lifecycle emails. Require `productId` and `recipientEmail`.
+Product-scoped events for webinar/event transactional emails. Require `productId` and `recipientEmail`.
 
 | Event               | Dedup Strategy              | Recipient |
 | ------------------- | --------------------------- | --------- |
@@ -111,7 +111,7 @@ Dedup key format: `{appId}:{eventType}:{recipientEmail}:{productId}`
 - **Runtime:** Node 20, TypeScript (ESM)
 - **Framework:** Express
 - **Database:** PostgreSQL via Drizzle ORM
-- **Email delivery:** Email Sending Service (unified gateway)
+- **Email delivery:** Email Gateway (routes to Postmark/Instantly)
 - **User resolution:** Clerk
 - **Validation & OpenAPI:** Zod + @asteasolutions/zod-to-openapi
 - **Deployment:** Railway (Docker)
@@ -129,10 +129,10 @@ npm run dev             # start dev server on PORT
 
 | Variable | Description |
 | -------- | ----------- |
-| `LIFECYCLE_EMAILS_SERVICE_DATABASE_URL` | PostgreSQL connection string |
-| `LIFECYCLE_EMAILS_SERVICE_API_KEY` | API key for authenticating requests |
-| `EMAIL_SENDING_SERVICE_URL` | Email Sending Service endpoint (default: https://email-sending.mcpfactory.org) |
-| `EMAIL_SENDING_SERVICE_API_KEY` | Email Sending Service API key |
+| `TRANSACTIONAL_EMAIL_SERVICE_DATABASE_URL` | PostgreSQL connection string |
+| `TRANSACTIONAL_EMAIL_SERVICE_API_KEY` | API key for authenticating requests |
+| `EMAIL_GATEWAY_URL` | Email Gateway endpoint (default: https://email-sending.mcpfactory.org) |
+| `EMAIL_GATEWAY_API_KEY` | Email Gateway API key |
 | `RUNS_SERVICE_URL` | Runs service endpoint (default: http://localhost:3006) |
 | `RUNS_SERVICE_API_KEY` | Runs service API key |
 | `CLERK_SECRET_KEY` | Clerk secret key for user resolution |
@@ -164,7 +164,7 @@ src/
     schema.ts           # Drizzle schema (email_events table)
   lib/
     clerk.ts            # Clerk user/org email resolution
-    email-sending.ts    # Email Sending Service client
+    email-gateway.ts    # Email Gateway client
     runs-client.ts      # Runs service client (create/update runs via clerkOrgId)
   middleware/
     auth.ts             # API key authentication

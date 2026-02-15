@@ -1,5 +1,5 @@
-const EMAIL_SENDING_URL = process.env.EMAIL_SENDING_SERVICE_URL || "https://email-sending.mcpfactory.org";
-const EMAIL_SENDING_API_KEY = process.env.EMAIL_SENDING_SERVICE_API_KEY;
+const EMAIL_GATEWAY_URL = process.env.EMAIL_GATEWAY_URL || "https://email-sending.mcpfactory.org";
+const EMAIL_GATEWAY_API_KEY = process.env.EMAIL_GATEWAY_API_KEY;
 
 interface SendEmailParams {
   to: string;
@@ -15,15 +15,15 @@ interface SendEmailParams {
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
-  if (!EMAIL_SENDING_API_KEY) {
-    throw new Error("EMAIL_SENDING_SERVICE_API_KEY is not configured");
+  if (!EMAIL_GATEWAY_API_KEY) {
+    throw new Error("EMAIL_GATEWAY_API_KEY is not configured");
   }
 
-  const response = await fetch(`${EMAIL_SENDING_URL}/send`, {
+  const response = await fetch(`${EMAIL_GATEWAY_URL}/send`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-API-Key": EMAIL_SENDING_API_KEY,
+      "X-API-Key": EMAIL_GATEWAY_API_KEY,
     },
     body: JSON.stringify({
       type: "transactional",

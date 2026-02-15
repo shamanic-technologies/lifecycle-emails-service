@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.LIFECYCLE_EMAILS_SERVICE_DATABASE_URL!,
+    url: process.env.TRANSACTIONAL_EMAIL_SERVICE_DATABASE_URL!,
   },
 });
