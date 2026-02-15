@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.hoisted(() => {
-  process.env.EMAIL_GATEWAY_API_KEY = "test-api-key";
+  process.env.EMAIL_GATEWAY_SERVICE_API_KEY = "test-api-key";
   process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY = "test-service-key";
 });
 
