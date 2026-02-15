@@ -9,7 +9,7 @@ vi.mock("../../src/lib/clerk.js", () => ({
   resolveOrgEmails: vi.fn().mockResolvedValue(["org1@test.com", "org2@test.com"]),
 }));
 
-vi.mock("../../src/lib/email-sending.js", () => ({
+vi.mock("../../src/lib/email-gateway.js", () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -21,10 +21,10 @@ vi.mock("../../src/lib/runs-client.js", () => ({
 import app from "../../src/index.js";
 import { db, sql } from "../../src/db/index.js";
 import { emailEvents } from "../../src/db/schema.js";
-import { sendEmail } from "../../src/lib/email-sending.js";
+import { sendEmail } from "../../src/lib/email-gateway.js";
 import { resolveUserEmail } from "../../src/lib/clerk.js";
 
-const API_KEY = process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY!;
+const API_KEY = process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY!;
 
 // Base fields required by every request
 const BASE = { brandId: "brand_test", campaignId: "campaign_test" };

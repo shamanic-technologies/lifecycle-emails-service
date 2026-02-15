@@ -7,7 +7,7 @@ describe("GET /health", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       status: "ok",
-      service: "lifecycle-emails-service",
+      service: "transactional-email-service",
     });
   });
 });

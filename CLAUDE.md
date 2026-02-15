@@ -1,6 +1,6 @@
-# Project: Lifecycle Emails Service
+# Project: Transactional Email Service
 
-Transactional email service that sends lifecycle emails triggered by user events. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via the Email Sending Service.
+Transactional email service that sends event-triggered emails. Resolves recipients via Clerk, deduplicates sends, renders HTML/text templates, and delivers via the Email Gateway.
 
 ## Commands
 
@@ -23,7 +23,7 @@ Transactional email service that sends lifecycle emails triggered by user events
 - `src/routes/` — Route handlers (`send.ts`, `stats.ts`, `health.ts`, `openapi.ts`)
 - `src/middleware/auth.ts` — API key authentication
 - `src/lib/clerk.ts` — Clerk user/org email resolution
-- `src/lib/email-sending.ts` — Email Sending Service client
+- `src/lib/email-gateway.ts` — Email Gateway client
 - `src/lib/runs-client.ts` — Runs service client (create/update runs)
 - `src/db/schema.ts` — Drizzle schema (`email_events` table)
 - `src/db/index.ts` — Database connection

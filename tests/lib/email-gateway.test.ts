@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.hoisted(() => {
-  process.env.EMAIL_SENDING_SERVICE_API_KEY = "test-api-key";
+  process.env.EMAIL_GATEWAY_API_KEY = "test-api-key";
 });
 
-import { sendEmail } from "../../src/lib/email-sending.js";
+import { sendEmail } from "../../src/lib/email-gateway.js";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("sendEmail", () => {
-  it("sends a transactional email via the email-sending service", async () => {
+  it("sends a transactional email via the email gateway", async () => {
     await sendEmail({
       to: "test@example.com",
       subject: "Test subject",
@@ -96,7 +96,7 @@ describe("sendEmail", () => {
     expect(body.runId).toBe("run_abc");
   });
 
-  it("includes all required fields for email-sending service", async () => {
+  it("includes all required fields for email gateway", async () => {
     await sendEmail({
       to: "test@example.com",
       subject: "Test",

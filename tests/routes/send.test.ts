@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.hoisted(() => {
-  process.env.EMAIL_SENDING_SERVICE_API_KEY = "test-api-key";
-  process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY = "test-service-key";
+  process.env.EMAIL_GATEWAY_API_KEY = "test-api-key";
+  process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY = "test-service-key";
 });
 
 // Mock db to avoid needing a real database
@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe("POST /send", () => {
-  it("creates a run and passes all required fields to email-sending service", async () => {
+  it("creates a run and passes all required fields to email gateway", async () => {
     const res = await request(app)
       .post("/send")
       .set("X-API-Key", "test-service-key")
@@ -79,7 +79,7 @@ describe("POST /send", () => {
     expect(body.campaignId).toBe("campaign_def");
   });
 
-  it("uses system org for createRun but omits clerkOrgId from email-sending when not provided", async () => {
+  it("uses system org for createRun but omits clerkOrgId from email gateway when not provided", async () => {
     const { createRun } = await import("../../src/lib/runs-client.js");
 
     const res = await request(app)
@@ -97,10 +97,10 @@ describe("POST /send", () => {
 
     // createRun should still use the system org ID
     expect(createRun).toHaveBeenCalledWith(
-      expect.objectContaining({ clerkOrgId: "lifecycle-emails-service" })
+      expect.objectContaining({ clerkOrgId: "transactional-email-service" })
     );
 
-    // email-sending should NOT receive a fake clerkOrgId
+    // email gateway should NOT receive a fake clerkOrgId
     const [, options] = fetchSpy.mock.calls[0];
     const body = JSON.parse(options.body);
 

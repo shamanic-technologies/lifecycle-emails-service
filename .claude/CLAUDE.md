@@ -1,4 +1,4 @@
-# Project: Lifecycle Emails Service
+# Project: Transactional Email Service
 
 ## README Update Rule (MANDATORY)
 
