@@ -92,6 +92,12 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 | `campaign_stopped`  | None (repeatable) | User   |
 | `user_active`       | Daily per user | Admin     |
 
+## Event Types (kevinlourd-com)
+
+| Event               | Dedup Strategy      | Recipient |
+| ------------------- | ------------------- | --------- |
+| `welcome`           | Once per user/email | User      |
+
 ## Event Types (generic)
 
 Product-scoped events for webinar/event transactional emails. Require `productId` and `recipientEmail`.
@@ -184,6 +190,9 @@ src/
       campaign-created.ts
       campaign-stopped.ts
       user-active.ts
+    kevinlourd-com/     # kevinlourd.com app templates
+      layout.ts         # Minimal unbranded layout
+      welcome.ts
     generic/            # Generic webinar/event templates
       layout.ts         # Minimal unbranded layout
       webinar-welcome.ts
