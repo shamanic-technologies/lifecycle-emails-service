@@ -12,15 +12,15 @@ export const registry = new OpenAPIRegistry();
 
 export const SendRequestSchema = z
   .object({
-    appId: z.string(),
-    eventType: z.string(),
+    appId: z.string().openapi({ description: "App identifier. Must match the appId used when deploying templates via PUT /templates." }),
+    eventType: z.string().openapi({ description: "Event type. Must match a template name registered via PUT /templates (or a hardcoded template)." }),
     brandId: z.string().optional(),
     campaignId: z.string().optional(),
-    productId: z.string().optional(),
-    clerkUserId: z.string().optional(),
-    clerkOrgId: z.string().optional(),
-    recipientEmail: z.string().email().optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    productId: z.string().optional().openapi({ description: "Product/instance ID for product-scoped dedup (e.g. webinar ID). Required for webinar events." }),
+    clerkUserId: z.string().optional().openapi({ description: "Clerk user ID — resolves to their email address." }),
+    clerkOrgId: z.string().optional().openapi({ description: "Clerk org ID — sends to all org members." }),
+    recipientEmail: z.string().email().optional().openapi({ description: "Direct email address (fallback if no Clerk IDs)." }),
+    metadata: z.record(z.string(), z.unknown()).optional().openapi({ description: "Template-specific data. Keys are interpolated into {{variable}} placeholders in the template." }),
   })
   .openapi("SendRequest");
 
@@ -87,17 +87,17 @@ export const StatsResponseSchema = z
 
 export const TemplateItemSchema = z
   .object({
-    name: z.string().min(1),
-    subject: z.string().min(1),
-    htmlBody: z.string().min(1),
-    textBody: z.string().optional().default(""),
+    name: z.string().min(1).openapi({ description: "Template name. Used as the eventType when calling POST /send. Must be unique within the appId.", example: "welcome" }),
+    subject: z.string().min(1).openapi({ description: "Email subject line. Supports {{variable}} interpolation from metadata.", example: "Welcome to {{appName}}!" }),
+    htmlBody: z.string().min(1).openapi({ description: "HTML email body. Supports {{variable}} interpolation from metadata.", example: "<h1>Welcome {{name}}!</h1>" }),
+    textBody: z.string().optional().default("").openapi({ description: "Plain text email body (optional). Supports {{variable}} interpolation from metadata." }),
   })
   .openapi("TemplateItem");
 
 export const DeployTemplatesRequestSchema = z
   .object({
-    appId: z.string().min(1),
-    templates: z.array(TemplateItemSchema).min(1),
+    appId: z.string().min(1).openapi({ description: "Your application identifier. Templates are scoped to (appId + name). Use the same appId when sending emails via POST /send.", example: "my-app" }),
+    templates: z.array(TemplateItemSchema).min(1).openapi({ description: "The templates to deploy. Existing templates with the same name are updated." }),
   })
   .openapi("DeployTemplatesRequest");
 
@@ -135,9 +135,9 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/send",
-  summary: "Send a lifecycle email",
+  summary: "Send a transactional email",
   description:
-    "Send a templated lifecycle email with deduplication support. Resolves recipients via Clerk user/org IDs or direct email.",
+    "Send a transactional email using a previously registered template (via PUT /templates). Resolves recipients via Clerk user/org IDs or direct email. Metadata keys are interpolated into {{variable}} placeholders in the template. Dedup strategy depends on the event type.",
   tags: ["Email"],
   security: [{ apiKey: [] }],
   request: {
@@ -197,7 +197,7 @@ registry.registerPath({
   path: "/templates",
   summary: "Deploy (upsert) email templates",
   description:
-    "Idempotent: creates new templates or updates existing ones matched by (appId + name). Call this at app startup to register all your email templates. Templates support {{variable}} interpolation from metadata passed at send time.",
+    "Idempotent: creates new templates or updates existing ones matched by (appId + name). Call this at app startup to register all your email templates. After deploying, send emails via POST /send with the same appId and eventType matching the template name. Templates support {{variable}} interpolation — metadata keys passed at send time replace matching {{key}} placeholders in subject, htmlBody, and textBody.",
   tags: ["Templates"],
   security: [{ apiKey: [] }],
   request: {
