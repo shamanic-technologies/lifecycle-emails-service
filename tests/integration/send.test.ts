@@ -20,7 +20,7 @@ vi.mock("../../src/lib/runs-client.js", () => ({
 
 import app from "../../src/index.js";
 import { db, sql } from "../../src/db/index.js";
-import { emailEvents } from "../../src/db/schema.js";
+import { emailEvents, emailTemplates } from "../../src/db/schema.js";
 import { sendEmail } from "../../src/lib/email-gateway.js";
 import { resolveUserEmail } from "../../src/lib/clerk.js";
 
@@ -31,6 +31,18 @@ const BASE = { brandId: "brand_test", campaignId: "campaign_test" };
 
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: "./drizzle" });
+
+  // Seed dynamic template for kevinlourd-com tests
+  await db
+    .insert(emailTemplates)
+    .values({
+      appId: "kevinlourd-com",
+      name: "newsletter-welcome",
+      subject: "Welcome to my monthly letter",
+      htmlBody: "<h1>Welcome!</h1>",
+      textBody: "Welcome!",
+    })
+    .onConflictDoNothing();
 }, 15000);
 
 beforeEach(async () => {
@@ -41,6 +53,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await sql`TRUNCATE TABLE email_events CASCADE`;
+  await sql`TRUNCATE TABLE email_templates CASCADE`;
   await sql.end();
 });
 
@@ -246,6 +259,21 @@ describe("anonymous welcome dedup", () => {
       appId: "mcpfactory",
       eventType: "welcome",
       recipientEmail: "anon@test.com",
+    };
+
+    const first = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+    const second = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
+
+    expect(first.body.results[0].sent).toBe(true);
+    expect(second.body.results[0].sent).toBe(false);
+    expect(second.body.results[0].reason).toBe("duplicate");
+  });
+
+  it("deduplicates newsletter-welcome by recipientEmail", async () => {
+    const payload = {
+      appId: "kevinlourd-com",
+      eventType: "newsletter-welcome",
+      recipientEmail: "subscriber@test.com",
     };
 
     const first = await request(app).post("/send").set("x-api-key", API_KEY).send(payload);
