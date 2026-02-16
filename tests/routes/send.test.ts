@@ -15,6 +15,14 @@ vi.mock("../../src/db/index.js", () => ({
         }),
       }),
     }),
+    // getTemplate now queries DB first; return empty to fall back to hardcoded templates
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }),
   },
 }));
 
