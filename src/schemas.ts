@@ -12,15 +12,22 @@ export const registry = new OpenAPIRegistry();
 
 export const SendRequestSchema = z
   .object({
-    appId: z.string(),
-    eventType: z.string(),
-    brandId: z.string().optional(),
-    campaignId: z.string().optional(),
-    productId: z.string().optional(),
-    clerkUserId: z.string().optional(),
-    clerkOrgId: z.string().optional(),
-    recipientEmail: z.string().email().optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    appId: z.string().openapi({ description: "App identifier (e.g. 'mcpfactory'). Must match a registered template app." }),
+    eventType: z.string().openapi({
+      description:
+        "Event type determining which template to use and which dedup strategy applies. " +
+        "Once-only events (waitlist, welcome, signup_notification): sent at most once per recipient. " +
+        "Daily events (user_active): sent at most once per recipient per day. " +
+        "Product-scoped events (webinar_welcome, j_minus_3, j_minus_2, j_minus_1, j_day): sent once per recipient per productId. " +
+        "Any other event type has NO dedup and will send every time.",
+    }),
+    brandId: z.string().optional().openapi({ description: "Brand ID for tracking" }),
+    campaignId: z.string().optional().openapi({ description: "Campaign ID for tracking" }),
+    productId: z.string().optional().openapi({ description: "Product/instance ID, required for product-scoped dedup (e.g. webinar ID)" }),
+    clerkUserId: z.string().optional().openapi({ description: "Clerk user ID — used to resolve recipient email and as dedup identifier" }),
+    clerkOrgId: z.string().optional().openapi({ description: "Clerk org ID — sends to all org members" }),
+    recipientEmail: z.string().email().optional().openapi({ description: "Direct recipient email (fallback when no Clerk IDs provided)" }),
+    metadata: z.record(z.string(), z.unknown()).optional().openapi({ description: "Template variables for {{variable}} interpolation" }),
   })
   .openapi("SendRequest");
 
@@ -137,7 +144,14 @@ registry.registerPath({
   path: "/send",
   summary: "Send a lifecycle email",
   description:
-    "Send a templated lifecycle email with deduplication support. Resolves recipients via Clerk user/org IDs or direct email.",
+    "Send a templated lifecycle email. Resolves recipients via Clerk user/org IDs or direct email. " +
+    "One of clerkUserId, clerkOrgId, or recipientEmail is required.\n\n" +
+    "**Deduplication:** The dedup strategy depends on eventType:\n" +
+    "- **Once-only** (waitlist, welcome, signup_notification): sent at most once per recipient, ever. Dedup key: `{appId}:{eventType}:{clerkUserId or recipientEmail}`.\n" +
+    "- **Daily** (user_active): sent at most once per recipient per day. Dedup key: `{appId}:{eventType}:{identifier}:{YYYY-MM-DD}`.\n" +
+    "- **Product-scoped** (webinar_welcome, j_minus_3, j_minus_2, j_minus_1, j_day): sent once per recipient per productId. Dedup key: `{appId}:{eventType}:{recipientEmail}:{productId}`.\n" +
+    "- **No dedup** (all other event types): sends every time with no dedup.\n\n" +
+    "Duplicate sends return `{ sent: false, reason: 'duplicate' }`. To add a new event type to dedup, add it to the corresponding set in send.ts.",
   tags: ["Email"],
   security: [{ apiKey: [] }],
   request: {
