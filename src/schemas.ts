@@ -83,6 +83,39 @@ export const StatsResponseSchema = z
   })
   .openapi("StatsResponse");
 
+// --- PUT /templates ---
+
+export const TemplateItemSchema = z
+  .object({
+    name: z.string().min(1),
+    subject: z.string().min(1),
+    htmlBody: z.string().min(1),
+    textBody: z.string().optional().default(""),
+  })
+  .openapi("TemplateItem");
+
+export const DeployTemplatesRequestSchema = z
+  .object({
+    appId: z.string().min(1),
+    templates: z.array(TemplateItemSchema).min(1),
+  })
+  .openapi("DeployTemplatesRequest");
+
+export type DeployTemplatesRequest = z.infer<typeof DeployTemplatesRequestSchema>;
+
+export const DeployTemplateResultSchema = z
+  .object({
+    name: z.string(),
+    action: z.enum(["created", "updated"]),
+  })
+  .openapi("DeployTemplateResult");
+
+export const DeployTemplatesResponseSchema = z
+  .object({
+    templates: z.array(DeployTemplateResultSchema),
+  })
+  .openapi("DeployTemplatesResponse");
+
 // --- Register endpoints ---
 
 registry.registerPath({
@@ -150,6 +183,36 @@ registry.registerPath({
     },
     400: {
       description: "Validation error or missing filters",
+      content: { "application/json": { schema: ErrorResponseSchema } },
+    },
+    401: {
+      description: "Unauthorized - invalid or missing API key",
+      content: { "application/json": { schema: ErrorResponseSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/templates",
+  summary: "Deploy (upsert) email templates",
+  description:
+    "Idempotent: creates new templates or updates existing ones matched by (appId + name). Call this at app startup to register all your email templates. Templates support {{variable}} interpolation from metadata passed at send time.",
+  tags: ["Templates"],
+  security: [{ apiKey: [] }],
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: DeployTemplatesRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Templates deployed",
+      content: { "application/json": { schema: DeployTemplatesResponseSchema } },
+    },
+    400: {
+      description: "Validation error",
       content: { "application/json": { schema: ErrorResponseSchema } },
     },
     401: {
