@@ -10,7 +10,7 @@ export const emailEvents = pgTable(
     dedupKey: text("dedup_key"),
     clerkUserId: text("clerk_user_id"),
     clerkOrgId: text("clerk_org_id"),
-    status: text("status").notNull().default("sent"),
+    status: text("status").notNull().default("pending"),
     errorMessage: text("error_message"),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

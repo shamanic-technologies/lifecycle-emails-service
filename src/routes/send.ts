@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { eq } from "drizzle-orm";
 import { requireApiKey } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { emailEvents } from "../db/schema.js";
@@ -132,10 +133,10 @@ router.post("/send", requireApiKey, async (req, res) => {
         continue;
       }
 
-      let eventRowId: string | null = null;
+      let insertedEventId: string | null = null;
 
       try {
-        // Insert with dedup (status "pending" until send succeeds)
+        // Insert with dedup — status "pending" until gateway confirms
         if (recipientDedupKey) {
           const inserted = await db
             .insert(emailEvents)
@@ -157,20 +158,25 @@ router.post("/send", requireApiKey, async (req, res) => {
             results.push({ email, sent: false, reason: "duplicate" });
             continue;
           }
-          eventRowId = inserted[0].id;
+
+          insertedEventId = inserted[0].id;
         } else {
-          // Repeatable event: just insert for history
-          const inserted = await db.insert(emailEvents).values({
-            appId: body.appId,
-            eventType: body.eventType,
-            recipientEmail: email,
-            dedupKey: null,
-            clerkUserId: body.clerkUserId || null,
-            clerkOrgId: body.clerkOrgId || null,
-            status: "pending",
-            metadata: metadata || null,
-          }).returning();
-          eventRowId = inserted[0].id;
+          // Repeatable event: insert for history
+          const [inserted] = await db
+            .insert(emailEvents)
+            .values({
+              appId: body.appId,
+              eventType: body.eventType,
+              recipientEmail: email,
+              dedupKey: null,
+              clerkUserId: body.clerkUserId || null,
+              clerkOrgId: body.clerkOrgId || null,
+              status: "pending",
+              metadata: metadata || null,
+            })
+            .returning();
+
+          insertedEventId = inserted.id;
         }
 
         // Send via email gateway
@@ -187,16 +193,11 @@ router.post("/send", requireApiKey, async (req, res) => {
           campaignId: body.campaignId,
         });
 
-        // Mark as sent after successful delivery
-        try {
-          const { eq } = await import("drizzle-orm");
-          await db
-            .update(emailEvents)
-            .set({ status: "sent" })
-            .where(eq(emailEvents.id, eventRowId));
-        } catch {
-          // Best effort — email was sent even if DB update fails
-        }
+        // Mark as sent only after successful delivery
+        await db
+          .update(emailEvents)
+          .set({ status: "sent" })
+          .where(eq(emailEvents.id, insertedEventId));
 
         await updateRun(run.id, "completed");
         results.push({ email, sent: true });
@@ -210,14 +211,13 @@ router.post("/send", requireApiKey, async (req, res) => {
           // Best effort
         }
 
-        // Update status to failed
-        if (eventRowId) {
+        // Update event status to failed
+        if (insertedEventId) {
           try {
-            const { eq } = await import("drizzle-orm");
             await db
               .update(emailEvents)
               .set({ status: "failed", errorMessage: err.message })
-              .where(eq(emailEvents.id, eventRowId));
+              .where(eq(emailEvents.id, insertedEventId));
           } catch {
             // Best effort
           }

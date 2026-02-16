@@ -44,6 +44,7 @@ router.post("/stats", requireApiKey, async (req, res) => {
       totalEmails: 0,
       sent: 0,
       failed: 0,
+      pending: 0,
     };
 
     for (const row of rows) {
@@ -51,6 +52,7 @@ router.post("/stats", requireApiKey, async (req, res) => {
       stats.totalEmails += c;
       if (row.status === "sent") stats.sent += c;
       if (row.status === "failed") stats.failed += c;
+      if (row.status === "pending") stats.pending += c;
     }
 
     res.json({ stats });
