@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { eq, and } from "drizzle-orm";
 import { requireApiKey } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { emailTemplates } from "../db/schema.js";
@@ -19,33 +18,28 @@ router.put("/templates", requireApiKey, async (req, res) => {
     const results: Array<{ name: string; action: "created" | "updated" }> = [];
 
     for (const tpl of templates) {
-      const existing = await db
-        .select({ id: emailTemplates.id })
-        .from(emailTemplates)
-        .where(and(eq(emailTemplates.appId, appId), eq(emailTemplates.name, tpl.name)))
-        .limit(1);
-
-      if (existing.length > 0) {
-        await db
-          .update(emailTemplates)
-          .set({
-            subject: tpl.subject,
-            htmlBody: tpl.htmlBody,
-            textBody: tpl.textBody,
-            updatedAt: new Date(),
-          })
-          .where(eq(emailTemplates.id, existing[0].id));
-        results.push({ name: tpl.name, action: "updated" });
-      } else {
-        await db.insert(emailTemplates).values({
+      const [row] = await db
+        .insert(emailTemplates)
+        .values({
           appId,
           name: tpl.name,
           subject: tpl.subject,
           htmlBody: tpl.htmlBody,
           textBody: tpl.textBody,
-        });
-        results.push({ name: tpl.name, action: "created" });
-      }
+        })
+        .onConflictDoUpdate({
+          target: [emailTemplates.appId, emailTemplates.name],
+          set: {
+            subject: tpl.subject,
+            htmlBody: tpl.htmlBody,
+            textBody: tpl.textBody,
+            updatedAt: new Date(),
+          },
+        })
+        .returning({ createdAt: emailTemplates.createdAt, updatedAt: emailTemplates.updatedAt });
+
+      const action = row.createdAt.getTime() === row.updatedAt.getTime() ? "created" : "updated";
+      results.push({ name: tpl.name, action });
     }
 
     res.json({ templates: results });
