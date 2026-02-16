@@ -72,6 +72,65 @@ At least one filter is required.
 }
 ```
 
+### `PUT /templates`
+
+Deploy (upsert) email templates. Idempotent: creates new templates or updates existing ones matched by `(appId + name)`. Call this at app startup to register all your email templates. Templates support `{{variable}}` interpolation from metadata passed at send time.
+
+Requires `x-api-key` header.
+
+**Request body:**
+
+```json
+{
+  "appId": "kevinlourd-com",
+  "templates": [
+    {
+      "name": "welcome",
+      "subject": "Welcome to {{appName}}!",
+      "htmlBody": "<h1>Welcome {{name}}!</h1>",
+      "textBody": "Welcome {{name}}!"
+    }
+  ]
+}
+```
+
+| Field      | Required | Description                              |
+| ---------- | -------- | ---------------------------------------- |
+| `appId`    | Yes      | App identifier                           |
+| `templates`| Yes      | Array of templates (at least one)        |
+| `templates[].name` | Yes | Template name (matches `eventType` in `/send`) |
+| `templates[].subject` | Yes | Email subject (supports `{{var}}` interpolation) |
+| `templates[].htmlBody` | Yes | HTML body (supports `{{var}}` interpolation) |
+| `templates[].textBody` | No | Plain text body (supports `{{var}}` interpolation) |
+
+**Response:**
+
+```json
+{
+  "templates": [
+    { "name": "welcome", "action": "created" }
+  ]
+}
+```
+
+**Usage pattern (app startup):**
+
+```typescript
+// instrumentation.ts
+export async function register() {
+  await fetch(`${process.env.TRANSACTIONAL_EMAIL_SERVICE_URL}/templates`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "x-api-key": process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY! },
+    body: JSON.stringify({
+      appId: "my-app",
+      templates: [
+        { name: "welcome", subject: "Welcome!", htmlBody: "<h1>Welcome!</h1>", textBody: "Welcome!" },
+      ]
+    }),
+  });
+}
+```
+
 ### `GET /health`
 
 Returns `{ "status": "ok" }`.
@@ -91,12 +150,6 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 | `campaign_created`  | None (repeatable) | User   |
 | `campaign_stopped`  | None (repeatable) | User   |
 | `user_active`       | Daily per user | Admin     |
-
-## Event Types (kevinlourd-com)
-
-| Event               | Dedup Strategy      | Recipient |
-| ------------------- | ------------------- | --------- |
-| `welcome`           | Once per user/email | User      |
 
 ## Event Types (generic)
 
@@ -167,7 +220,7 @@ src/
   schemas.ts            # Zod schemas + OpenAPI registry (single source of truth)
   db/
     index.ts            # Database connection
-    schema.ts           # Drizzle schema (email_events table)
+    schema.ts           # Drizzle schema (email_events + email_templates tables)
   lib/
     clerk.ts            # Clerk user/org email resolution
     email-gateway.ts    # Email Gateway client
@@ -179,9 +232,10 @@ src/
     openapi.ts          # GET /openapi.json endpoint
     send.ts             # POST /send endpoint with dedup logic
     stats.ts            # POST /stats endpoint for aggregated email stats
+    templates.ts        # PUT /templates endpoint for template registration
   templates/
-    index.ts            # Template registry
-    mcpfactory/         # MCP Factory app templates
+    index.ts            # Template registry (DB-first lookup with hardcoded fallback)
+    mcpfactory/         # MCP Factory app templates (hardcoded)
       layout.ts         # Shared HTML layout
       waitlist.ts
       welcome.ts
@@ -190,10 +244,7 @@ src/
       campaign-created.ts
       campaign-stopped.ts
       user-active.ts
-    kevinlourd-com/     # kevinlourd.com app templates
-      layout.ts         # Minimal unbranded layout
-      welcome.ts
-    generic/            # Generic webinar/event templates
+    generic/            # Generic webinar/event templates (hardcoded)
       layout.ts         # Minimal unbranded layout
       webinar-welcome.ts
       j-minus-3.ts

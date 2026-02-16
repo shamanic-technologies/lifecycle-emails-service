@@ -101,7 +101,7 @@ router.post("/send", requireApiKey, async (req, res) => {
     }
 
     // Get template
-    const templateFn = getTemplate(body.appId, body.eventType);
+    const templateFn = await getTemplate(body.appId, body.eventType);
     const template = templateFn(metadata as Record<string, unknown>);
 
     const dedupKey = buildDedupKey(body.appId, body.eventType, body);
