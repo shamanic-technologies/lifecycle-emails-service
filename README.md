@@ -67,10 +67,13 @@ At least one filter is required.
   "stats": {
     "totalEmails": 42,
     "sent": 40,
-    "failed": 2
+    "failed": 2,
+    "pending": 0
   }
 }
 ```
+
+Email status lifecycle: `pending` → `sent` (after gateway confirms delivery) or `failed` (if gateway errors).
 
 ### `PUT /templates`
 

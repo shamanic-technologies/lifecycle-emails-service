@@ -1,0 +1,1 @@
+ALTER TABLE "email_events" ALTER COLUMN "status" SET DEFAULT 'pending';

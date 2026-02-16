@@ -79,6 +79,7 @@ describe("POST /stats", () => {
       totalEmails: 12,
       sent: 10,
       failed: 2,
+      pending: 0,
     });
   });
 
