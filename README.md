@@ -190,7 +190,7 @@ npm run dev             # start dev server on PORT
 | -------- | ----------- |
 | `TRANSACTIONAL_EMAIL_SERVICE_DATABASE_URL` | PostgreSQL connection string |
 | `TRANSACTIONAL_EMAIL_SERVICE_API_KEY` | API key for authenticating requests |
-| `EMAIL_GATEWAY_SERVICE_URL` | Email Gateway endpoint (default: https://email-sending.mcpfactory.org) |
+| `EMAIL_GATEWAY_SERVICE_URL` | Email Gateway endpoint (default: https://email-gateway.mcpfactory.org) |
 | `EMAIL_GATEWAY_SERVICE_API_KEY` | Email Gateway API key |
 | `RUNS_SERVICE_URL` | Runs service endpoint (default: http://localhost:3006) |
 | `RUNS_SERVICE_API_KEY` | Runs service API key |
