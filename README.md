@@ -148,7 +148,6 @@ Returns the OpenAPI spec for this service. Used by the [API Registry Service](ht
 | ------------------- | -------------- | --------- |
 | `waitlist`          | Once per email | User      |
 | `welcome`           | Once per user/email | User  |
-| `newsletter-welcome` | Once per user/email | User |
 | `signup_notification` | Once per user | Admin     |
 | `signin_notification` | None (repeatable) | Admin |
 | `campaign_created`  | None (repeatable) | User   |

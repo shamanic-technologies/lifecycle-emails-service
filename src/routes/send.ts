@@ -12,7 +12,7 @@ import { SendRequestSchema } from "../schemas.js";
 const router = Router();
 
 // Event types that are deduped (sent only once per key)
-const ONCE_ONLY_EVENTS = new Set(["waitlist", "welcome", "newsletter-welcome", "signup_notification"]);
+const ONCE_ONLY_EVENTS = new Set(["waitlist", "welcome", "signup_notification"]);
 
 // Event types deduped per day (one per user per day)
 const DAILY_DEDUP_EVENTS = new Set(["user_active"]);
