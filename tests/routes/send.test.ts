@@ -10,9 +10,15 @@ vi.mock("../../src/db/index.js", () => ({
   db: {
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: "fake-id" }]),
         onConflictDoNothing: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{ id: "fake-id" }]),
         }),
+      }),
+    }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
       }),
     }),
     // getTemplate now queries DB first; return empty to fall back to hardcoded templates
