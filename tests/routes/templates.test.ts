@@ -1,30 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockInsertValues, mockUpdateSet, mockUpdateWhere, mockSelectLimit } = vi.hoisted(() => {
+const { mockReturning, mockOnConflictDoUpdate, mockValues, now, earlier } = vi.hoisted(() => {
   process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY = "test-service-key";
 
-  const mockInsertValues = vi.fn().mockResolvedValue(undefined);
-  const mockUpdateWhere = vi.fn().mockResolvedValue(undefined);
-  const mockUpdateSet = vi.fn().mockReturnValue({ where: mockUpdateWhere });
-  const mockSelectLimit = vi.fn().mockResolvedValue([]);
+  const now = new Date("2025-01-01T00:00:00Z");
+  const earlier = new Date("2024-06-01T00:00:00Z");
+  const mockReturning = vi.fn().mockResolvedValue([{ createdAt: now, updatedAt: now }]);
+  const mockOnConflictDoUpdate = vi.fn().mockReturnValue({ returning: mockReturning });
+  const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
 
-  return { mockInsertValues, mockUpdateSet, mockUpdateWhere, mockSelectLimit };
+  return { mockReturning, mockOnConflictDoUpdate, mockValues, now, earlier };
 });
 
 vi.mock("../../src/db/index.js", () => ({
   db: {
     insert: vi.fn().mockReturnValue({
-      values: mockInsertValues,
-    }),
-    update: vi.fn().mockReturnValue({
-      set: mockUpdateSet,
-    }),
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: mockSelectLimit,
-        }),
-      }),
+      values: mockValues,
     }),
   },
 }));
@@ -39,14 +30,14 @@ app.use(templatesRoutes);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSelectLimit.mockResolvedValue([]);
-  mockInsertValues.mockResolvedValue(undefined);
-  mockUpdateSet.mockReturnValue({ where: mockUpdateWhere });
-  mockUpdateWhere.mockResolvedValue(undefined);
+  // Default: created (timestamps equal)
+  mockReturning.mockResolvedValue([{ createdAt: now, updatedAt: now }]);
+  mockOnConflictDoUpdate.mockReturnValue({ returning: mockReturning });
+  mockValues.mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
 });
 
 describe("PUT /templates", () => {
-  it("creates new templates when none exist", async () => {
+  it("creates new templates via upsert", async () => {
     const res = await request(app)
       .put("/templates")
       .set("X-API-Key", "test-service-key")
@@ -64,11 +55,12 @@ describe("PUT /templates", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.templates).toEqual([{ name: "welcome", action: "created" }]);
-    expect(mockInsertValues).toHaveBeenCalledOnce();
+    expect(mockOnConflictDoUpdate).toHaveBeenCalledOnce();
   });
 
-  it("updates existing templates", async () => {
-    mockSelectLimit.mockResolvedValue([{ id: "existing-id" }]);
+  it("updates existing templates via upsert", async () => {
+    // updatedAt is later than createdAt → means it was an update
+    mockReturning.mockResolvedValue([{ createdAt: earlier, updatedAt: now }]);
 
     const res = await request(app)
       .put("/templates")
@@ -87,7 +79,36 @@ describe("PUT /templates", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.templates).toEqual([{ name: "welcome", action: "updated" }]);
-    expect(mockUpdateSet).toHaveBeenCalledOnce();
+  });
+
+  it("handles concurrent deploys without errors (upsert is atomic)", async () => {
+    // Both calls return "created" — the important thing is no duplicate key error
+    const res = await request(app)
+      .put("/templates")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "polaritycourse",
+        templates: [
+          {
+            name: "webinar-registration-welcome",
+            subject: "Welcome!",
+            htmlBody: "<h1>Hi</h1>",
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.templates).toHaveLength(1);
+    // Verify onConflictDoUpdate was called (not a plain insert)
+    expect(mockOnConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expect.any(Array),
+        set: expect.objectContaining({
+          subject: "Welcome!",
+          htmlBody: "<h1>Hi</h1>",
+        }),
+      })
+    );
   });
 
   it("handles multiple templates in one request", async () => {
