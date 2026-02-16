@@ -1,5 +1,6 @@
 import * as mcpfactory from "./mcpfactory/index.js";
 import * as generic from "./generic/index.js";
+import * as kevinlourdCom from "./kevinlourd-com/index.js";
 
 export interface TemplateResult {
   subject: string;
@@ -12,6 +13,7 @@ type TemplateFn = (metadata?: Record<string, unknown>) => TemplateResult;
 const registry: Record<string, Record<string, TemplateFn>> = {
   mcpfactory: mcpfactory.templates,
   generic: generic.templates,
+  "kevinlourd-com": kevinlourdCom.templates,
 };
 
 export function getTemplate(appId: string, eventType: string): TemplateFn {
