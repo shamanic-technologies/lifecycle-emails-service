@@ -14,7 +14,7 @@ router.put("/templates", requireApiKey, async (req, res) => {
       return;
     }
 
-    const { appId, from, messageStream, templates } = parsed.data;
+    const { appId, templates } = parsed.data;
     const results: Array<{ name: string; action: "created" | "updated" }> = [];
 
     for (const tpl of templates) {
@@ -26,8 +26,8 @@ router.put("/templates", requireApiKey, async (req, res) => {
           subject: tpl.subject,
           htmlBody: tpl.htmlBody,
           textBody: tpl.textBody,
-          fromAddress: from ?? null,
-          messageStream: messageStream ?? null,
+          fromAddress: tpl.from ?? null,
+          messageStream: tpl.messageStream ?? null,
         })
         .onConflictDoUpdate({
           target: [emailTemplates.appId, emailTemplates.name],
@@ -35,8 +35,8 @@ router.put("/templates", requireApiKey, async (req, res) => {
             subject: tpl.subject,
             htmlBody: tpl.htmlBody,
             textBody: tpl.textBody,
-            fromAddress: from ?? null,
-            messageStream: messageStream ?? null,
+            fromAddress: tpl.from ?? null,
+            messageStream: tpl.messageStream ?? null,
             updatedAt: new Date(),
           },
         })

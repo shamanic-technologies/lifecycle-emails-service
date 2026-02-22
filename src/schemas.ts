@@ -98,14 +98,14 @@ export const TemplateItemSchema = z
     subject: z.string().min(1),
     htmlBody: z.string().min(1),
     textBody: z.string().optional().default(""),
+    from: z.string().optional().openapi({ description: "Sender address for this template, e.g. \"Display Name <email@domain.com>\". If omitted, the email gateway default is used." }),
+    messageStream: z.string().optional().openapi({ description: "Postmark message stream ID, e.g. \"outbound\" or \"broadcast\". If omitted, the email gateway default is used." }),
   })
   .openapi("TemplateItem");
 
 export const DeployTemplatesRequestSchema = z
   .object({
     appId: z.string().min(1),
-    from: z.string().optional().openapi({ description: "Sender address for all templates, e.g. \"Display Name <email@domain.com>\". If omitted, the email gateway default is used." }),
-    messageStream: z.string().optional().openapi({ description: "Postmark message stream ID, e.g. \"outbound\" or \"broadcast\". If omitted, the email gateway default is used." }),
     templates: z.array(TemplateItemSchema).min(1),
   })
   .openapi("DeployTemplatesRequest");

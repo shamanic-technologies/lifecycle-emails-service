@@ -129,19 +129,19 @@ describe("PUT /templates", () => {
     expect(res.body.templates[1]).toEqual({ name: "reset", action: "created" });
   });
 
-  it("persists from and messageStream in upsert values", async () => {
+  it("persists per-template from and messageStream in upsert values", async () => {
     const res = await request(app)
       .put("/templates")
       .set("X-API-Key", "test-service-key")
       .send({
         appId: "growthagency",
-        from: "GrowthAgency <hello@growthagency.dev>",
-        messageStream: "outbound",
         templates: [
           {
             name: "checkout_success",
             subject: "Thanks for your purchase!",
             htmlBody: "<h1>Thanks!</h1>",
+            from: "GrowthAgency <hello@growthagency.dev>",
+            messageStream: "outbound",
           },
         ],
       });
@@ -154,6 +154,50 @@ describe("PUT /templates", () => {
       expect.objectContaining({
         fromAddress: "GrowthAgency <hello@growthagency.dev>",
         messageStream: "outbound",
+      })
+    );
+  });
+
+  it("supports different from per template in same request", async () => {
+    const res = await request(app)
+      .put("/templates")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "growthagency",
+        templates: [
+          {
+            name: "welcome",
+            subject: "Welcome!",
+            htmlBody: "<h1>Hi</h1>",
+            from: "GrowthAgency <hello@growthagency.dev>",
+            messageStream: "outbound",
+          },
+          {
+            name: "support_ticket",
+            subject: "Ticket received",
+            htmlBody: "<h1>Got it</h1>",
+            from: "Support <support@growthagency.dev>",
+            messageStream: "transactional",
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.templates).toHaveLength(2);
+
+    // First template
+    expect(mockValues).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({
+        fromAddress: "GrowthAgency <hello@growthagency.dev>",
+        messageStream: "outbound",
+      })
+    );
+
+    // Second template with different from
+    expect(mockValues).toHaveBeenNthCalledWith(2,
+      expect.objectContaining({
+        fromAddress: "Support <support@growthagency.dev>",
+        messageStream: "transactional",
       })
     );
   });
