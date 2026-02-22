@@ -96,6 +96,80 @@ describe("sendEmail", () => {
     expect(body.runId).toBe("run_abc");
   });
 
+  it("passes from to email gateway when provided", async () => {
+    await sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+      appId: "growthagency",
+      from: "GrowthAgency <hello@growthagency.dev>",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.from).toBe("GrowthAgency <hello@growthagency.dev>");
+  });
+
+  it("passes postmark.messageStream to email gateway when provided", async () => {
+    await sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+      appId: "growthagency",
+      messageStream: "outbound",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.postmark).toEqual({ messageStream: "outbound" });
+  });
+
+  it("passes both from and postmark.messageStream when both provided", async () => {
+    await sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+      appId: "growthagency",
+      from: "GrowthAgency <hello@growthagency.dev>",
+      messageStream: "outbound",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.from).toBe("GrowthAgency <hello@growthagency.dev>");
+    expect(body.postmark).toEqual({ messageStream: "outbound" });
+  });
+
+  it("omits from and postmark when not provided", async () => {
+    await sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      htmlBody: "<p>Test</p>",
+      textBody: "Test",
+      tag: "test-tag",
+      runId: "run_abc",
+      appId: "mcpfactory",
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.from).toBeUndefined();
+    expect(body.postmark).toBeUndefined();
+  });
+
   it("includes all required fields for email gateway", async () => {
     await sendEmail({
       to: "test@example.com",

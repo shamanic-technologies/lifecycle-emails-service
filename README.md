@@ -85,7 +85,9 @@ Requires `x-api-key` header.
 
 ```json
 {
-  "appId": "kevinlourd-com",
+  "appId": "growthagency",
+  "from": "GrowthAgency <hello@growthagency.dev>",
+  "messageStream": "outbound",
   "templates": [
     {
       "name": "welcome",
@@ -100,6 +102,8 @@ Requires `x-api-key` header.
 | Field      | Required | Description                              |
 | ---------- | -------- | ---------------------------------------- |
 | `appId`    | Yes      | App identifier                           |
+| `from`     | No       | Sender address, e.g. `"Display Name <email@domain.com>"`. If omitted, the email gateway default is used. |
+| `messageStream` | No  | Postmark message stream ID, e.g. `"outbound"` or `"broadcast"`. If omitted, the email gateway default is used. |
 | `templates`| Yes      | Array of templates (at least one)        |
 | `templates[].name` | Yes | Template name (matches `eventType` in `/send`) |
 | `templates[].subject` | Yes | Email subject (supports `{{var}}` interpolation) |
@@ -126,6 +130,8 @@ export async function register() {
     headers: { "Content-Type": "application/json", "x-api-key": process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY! },
     body: JSON.stringify({
       appId: "my-app",
+      from: "MyApp <hello@myapp.dev>",       // optional: custom sender address
+      messageStream: "outbound",              // optional: Postmark stream ID
       templates: [
         { name: "welcome", subject: "Welcome!", htmlBody: "<h1>Welcome!</h1>", textBody: "Welcome!" },
       ]
@@ -223,7 +229,7 @@ src/
   schemas.ts            # Zod schemas + OpenAPI registry (single source of truth)
   db/
     index.ts            # Database connection
-    schema.ts           # Drizzle schema (email_events + email_templates tables)
+    schema.ts           # Drizzle schema (email_events + email_templates tables, incl. sender config)
   lib/
     clerk.ts            # Clerk user/org email resolution
     email-gateway.ts    # Email Gateway client

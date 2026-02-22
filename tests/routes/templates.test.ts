@@ -129,6 +129,60 @@ describe("PUT /templates", () => {
     expect(res.body.templates[1]).toEqual({ name: "reset", action: "created" });
   });
 
+  it("persists from and messageStream in upsert values", async () => {
+    const res = await request(app)
+      .put("/templates")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "growthagency",
+        from: "GrowthAgency <hello@growthagency.dev>",
+        messageStream: "outbound",
+        templates: [
+          {
+            name: "checkout_success",
+            subject: "Thanks for your purchase!",
+            htmlBody: "<h1>Thanks!</h1>",
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.templates).toEqual([{ name: "checkout_success", action: "created" }]);
+
+    // Verify from and messageStream were passed to the insert values
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromAddress: "GrowthAgency <hello@growthagency.dev>",
+        messageStream: "outbound",
+      })
+    );
+  });
+
+  it("sets fromAddress and messageStream to null when not provided", async () => {
+    const res = await request(app)
+      .put("/templates")
+      .set("X-API-Key", "test-service-key")
+      .send({
+        appId: "my-app",
+        templates: [
+          {
+            name: "welcome",
+            subject: "Welcome!",
+            htmlBody: "<h1>Welcome</h1>",
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromAddress: null,
+        messageStream: null,
+      })
+    );
+  });
+
   it("returns 400 for missing appId", async () => {
     const res = await request(app)
       .put("/templates")
